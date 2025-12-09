@@ -17,6 +17,7 @@ export interface ProjectData {
   analysis?: any; // Now optional as it's fetched async
   costEstimate?: string; // Now optional
   createdAt?: any;
+  products?: any[]; // Shopping list items
 }
 
 export async function saveProject(data: ProjectData) {

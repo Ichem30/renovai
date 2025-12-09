@@ -7,7 +7,7 @@ import { getProject, updateProject, ProjectData } from "@/lib/firestore";
 import { useRouter, useParams } from "next/navigation";
 // import { BeforeAfterSlider } from "@/components/ui/before-after";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Share2, Loader2, Maximize2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { ChatInterface } from "@/components/project/chat-interface";
 import { v4 as uuidv4 } from "uuid";
@@ -19,8 +19,11 @@ export default function ProjectDetailsPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [showShoppingList, setShowShoppingList] = useState(false);
   const router = useRouter();
   const params = useParams();
+
+  // ... (keep existing functions performAutoAnalysis, useEffect, handleGenerateImage, handleDeleteImage) ...
 
   const performAutoAnalysis = async (projectData: ProjectData) => {
     if (analyzing || projectData.analysis) return;
@@ -212,9 +215,9 @@ export default function ProjectDetailsPage() {
       
       <div className="flex flex-1 overflow-hidden pt-16">
         {/* Left Panel - Image Visualization (70%) */}
-        <div className="relative flex flex-1 flex-col border-r border-white/10 bg-gray-900">
+        <div className="relative flex flex-1 flex-col border-r border-white/10 bg-gray-900 overflow-y-auto">
           {/* Toolbar */}
-          <div className="flex items-center justify-between border-b border-white/10 bg-black/20 px-6 py-3 backdrop-blur-sm">
+          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/80 px-6 py-3 backdrop-blur-md">
             <div className="flex items-center gap-4">
               <Link 
                 href="/dashboard"
@@ -235,6 +238,17 @@ export default function ProjectDetailsPage() {
               </h1>
             </div>
             <div className="flex gap-2">
+              {project.products && project.products.length > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                  onClick={() => setShowShoppingList(true)}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span className="hidden sm:inline">Shopping List</span>
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
                 <Share2 className="h-4 w-4" />
               </Button>
@@ -248,7 +262,7 @@ export default function ProjectDetailsPage() {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-1 overflow-hidden p-6 flex flex-col items-center justify-center gap-6">
+          <div className="flex-shrink-0 p-6 flex flex-col items-center justify-center gap-6 min-h-[500px]">
             <div className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-white/10 shadow-2xl">
               {generating && (
                 <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -323,6 +337,61 @@ export default function ProjectDetailsPage() {
           />
         </div>
       </div>
+
+      {/* Shopping List Modal Overlay */}
+      {showShoppingList && project.products && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 bg-black/40">
+              <h3 className="flex items-center gap-2 text-xl font-bold text-white">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">🛍️</span>
+                Liste de Shopping
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-gray-400 hover:text-white"
+                onClick={() => setShowShoppingList(false)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {project.products.map((product: any, i: number) => (
+                  <a 
+                    key={i}
+                    href={`https://www.amazon.fr/s?k=${encodeURIComponent(product.searchTerm)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start gap-4 rounded-lg border border-white/5 bg-black/20 p-4 transition-all hover:border-purple-500/50 hover:bg-purple-500/10"
+                  >
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-white/10 text-2xl">
+                      {product.category === "Sofa" ? "🛋️" : 
+                       product.category === "Lamp" ? "💡" : 
+                       product.category === "Rug" ? "🧶" : "📦"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="truncate font-medium text-white group-hover:text-purple-300">
+                        {product.name}
+                      </h4>
+                      <p className="line-clamp-2 text-xs text-gray-400">
+                        {product.description}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1 text-xs font-medium text-purple-400">
+                        Voir sur Amazon <ArrowRight className="h-3 w-3" />
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
