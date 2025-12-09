@@ -5,12 +5,12 @@ import { Navbar } from "@/components/landing/navbar";
 import { useAuth } from "@/components/auth-provider";
 import { getProject, updateProject, ProjectData } from "@/lib/firestore";
 import { useRouter, useParams } from "next/navigation";
-// import { BeforeAfterSlider } from "@/components/ui/before-after";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X, Sparkles, Wand2 } from "lucide-react";
 import Link from "next/link";
 import { ChatInterface } from "@/components/project/chat-interface";
 import { v4 as uuidv4 } from "uuid";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProjectDetailsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -22,8 +22,6 @@ export default function ProjectDetailsPage() {
   const [showShoppingList, setShowShoppingList] = useState(false);
   const router = useRouter();
   const params = useParams();
-
-  // ... (keep existing functions performAutoAnalysis, useEffect, handleGenerateImage, handleDeleteImage) ...
 
   const performAutoAnalysis = async (projectData: ProjectData) => {
     if (analyzing || projectData.analysis) return;
@@ -37,10 +35,7 @@ export default function ProjectDetailsPage() {
       if (!response.ok) throw new Error("Analysis failed");
       const analysisResult = await response.json();
       
-      // Update Firestore
       await updateProject(projectData.id!, { analysis: analysisResult });
-      
-      // Update local state
       setProject(prev => prev ? ({ ...prev, analysis: analysisResult }) : null);
     } catch (error) {
       console.error("Auto-analysis error:", error);
@@ -57,27 +52,20 @@ export default function ProjectDetailsPage() {
 
     if (user && params.id) {
       const fetchProject = async () => {
-        console.log("Fetching project...", params.id);
         try {
           const data = await getProject(params.id as string);
-          console.log("Project data fetched:", data);
           
           if (data && data.userId === user.uid) {
             setProject(data);
-            
-            // Trigger Auto-Analysis if missing
             if (!data.analysis) {
-              console.log("Triggering auto-analysis");
               performAutoAnalysis(data);
             }
           } else {
-            console.log("Project not found or unauthorized");
-            // router.push("/dashboard");
+            // Handle unauthorized or not found
           }
         } catch (err) {
           console.error("Error in fetchProject:", err);
         } finally {
-          console.log("Setting loading to false");
           setLoading(false);
         }
       };
@@ -89,8 +77,6 @@ export default function ProjectDetailsPage() {
     if (!project || !user) return;
     setGenerating(true);
     
-    // Use the currently active image as the base for the new generation
-    // If no active image is selected (shouldn't happen ideally), fallback to original
     const baseImage = activeImage || project.originalImageUrl;
 
     try {
@@ -107,10 +93,8 @@ export default function ProjectDetailsPage() {
       if (!response.ok) throw new Error("Generation failed");
 
       const { imageBase64 } = await response.json();
-      
       if (!imageBase64) throw new Error("No image data received");
 
-      // Convert Base64 to File
       const byteCharacters = atob(imageBase64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -120,7 +104,6 @@ export default function ProjectDetailsPage() {
       const blob = new Blob([byteArray], { type: "image/png" });
       const file = new File([blob], "generated-design.png", { type: "image/png" });
 
-      // Upload to Firebase Storage
       const { uploadImage } = await import("@/lib/storage");
       const imageUrl = await uploadImage(file, user.uid);
       
@@ -131,19 +114,16 @@ export default function ProjectDetailsPage() {
         createdAt: new Date().toISOString(),
       };
 
-      // Update Firestore
       const updatedGenerations = [...(project.generations || []), newGeneration];
       await updateProject(project.id!, {
         generations: updatedGenerations
       });
 
-      // Update Local State
       setProject(prev => prev ? ({
         ...prev,
         generations: updatedGenerations
       }) : null);
       
-      // Set new image as active
       setActiveImage(imageUrl);
 
     } catch (error) {
@@ -155,24 +135,21 @@ export default function ProjectDetailsPage() {
   };
 
   const handleDeleteImage = async (e: React.MouseEvent, generationId: string) => {
-    e.stopPropagation(); // Prevent selecting the image when clicking delete
+    e.stopPropagation();
     if (!project || !confirm("Supprimer cette version ?")) return;
 
     try {
       const updatedGenerations = project.generations?.filter(g => g.id !== generationId) || [];
       
-      // Update Firestore
       await updateProject(project.id!, {
         generations: updatedGenerations
       });
 
-      // Update Local State
       setProject(prev => prev ? ({
         ...prev,
         generations: updatedGenerations
       }) : null);
 
-      // If deleted image was active, switch to original
       const deletedImage = project.generations?.find(g => g.id === generationId)?.imageUrl;
       if (activeImage === deletedImage) {
         setActiveImage(project.originalImageUrl);
@@ -193,12 +170,10 @@ export default function ProjectDetailsPage() {
   }
 
   if (!project) {
-    console.log("Project is null. User:", user?.uid, "Params:", params.id);
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
         <div className="text-center">
           <h2 className="text-xl font-bold text-red-500">Projet introuvable</h2>
-          <p className="text-gray-400">Impossible de charger les données du projet.</p>
           <Link href="/dashboard">
             <Button variant="outline" className="mt-4">Retour au Dashboard</Button>
           </Link>
@@ -210,27 +185,27 @@ export default function ProjectDetailsPage() {
   const currentAfterImage = activeImage || project.generations?.[project.generations.length - 1]?.imageUrl || project.originalImageUrl;
 
   return (
-    <div className="flex h-screen flex-col bg-black text-white overflow-hidden">
+    <div className="flex h-screen flex-col bg-black text-white overflow-hidden selection:bg-purple-500/30">
       <Navbar />
       
-      <div className="flex flex-1 overflow-hidden pt-16">
+      <div className="flex flex-1 overflow-hidden pt-20">
         {/* Left Panel - Image Visualization (70%) */}
-        <div className="relative flex flex-1 flex-col border-r border-white/10 bg-gray-900 overflow-y-auto">
-          {/* Toolbar */}
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-black/80 px-6 py-3 backdrop-blur-md">
+        <div className="relative flex flex-1 flex-col bg-black/50 overflow-y-auto">
+          {/* Glass Toolbar */}
+          <div className="sticky top-4 z-20 mx-auto w-[95%] max-w-4xl rounded-full border border-white/10 bg-black/60 px-6 py-3 backdrop-blur-xl shadow-2xl flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link 
                 href="/dashboard"
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
+                className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Retour
+                <span className="hidden sm:inline">Retour</span>
               </Link>
+              <div className="h-4 w-[1px] bg-white/10" />
               <h1 className="text-sm font-medium text-white flex items-center gap-2">
-                {project.name || project.analysis?.roomType || "Projet"} 
-                <span className="text-gray-500">#{project.id?.slice(0, 6)}</span>
+                <span className="font-outfit font-bold">{project.name || project.analysis?.roomType || "Projet"}</span>
                 {analyzing && (
-                  <span className="flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300">
+                  <span className="flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300 animate-pulse">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Analyse IA...
                   </span>
@@ -242,37 +217,46 @@ export default function ProjectDetailsPage() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="flex items-center gap-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                  className="flex items-center gap-2 rounded-full bg-purple-500/10 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20"
                   onClick={() => setShowShoppingList(true)}
                 >
                   <ShoppingBag className="h-4 w-4" />
                   <span className="hidden sm:inline">Shopping List</span>
                 </Button>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:bg-white/10 hover:text-white">
                 <Share2 className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:bg-white/10 hover:text-white">
                 <Download className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-white">
-                <Maximize2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-shrink-0 p-6 flex flex-col items-center justify-center gap-6 min-h-[500px]">
-            <div className="relative aspect-video w-full max-w-5xl overflow-hidden rounded-xl border border-white/10 shadow-2xl">
-              {generating && (
-                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm">
-                  <Loader2 className="h-12 w-12 animate-spin text-purple-500 mb-4" />
-                  <p className="text-lg font-medium text-white">Création de votre design...</p>
-                  <p className="text-sm text-gray-400">Cela peut prendre quelques secondes</p>
-                </div>
-              )}
+          <div className="flex-shrink-0 p-6 flex flex-col items-center justify-center gap-8 min-h-[600px]">
+            <div className="relative aspect-video w-full max-w-6xl overflow-hidden rounded-2xl border border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] bg-gray-900">
+              <AnimatePresence>
+                {generating && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md"
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20" />
+                      <div className="relative rounded-full bg-black p-4 border border-purple-500/30">
+                        <Wand2 className="h-8 w-8 animate-pulse text-purple-500" />
+                      </div>
+                    </div>
+                    <p className="mt-6 text-lg font-medium text-white font-outfit">Création de votre design...</p>
+                    <p className="text-sm text-gray-400">L'IA réinvente votre espace</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
-              <div className="relative h-full w-full overflow-hidden rounded-xl bg-gray-900">
+              <div className="relative h-full w-full overflow-hidden">
                 <img 
                   src={currentAfterImage} 
                   alt="Design actuel" 
@@ -280,25 +264,29 @@ export default function ProjectDetailsPage() {
                 />
                 
                 {/* Badge indicating version */}
-                <div className="absolute top-4 left-4 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
-                  {currentAfterImage === project.originalImageUrl ? "Original" : "Version Générée"}
+                <div className="absolute top-6 left-6 flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs font-medium text-white backdrop-blur-xl border border-white/10">
+                  <Sparkles className="h-3 w-3 text-purple-400" />
+                  {currentAfterImage === project.originalImageUrl ? "Photo Originale" : "Version Générée par IA"}
                 </div>
               </div>
             </div>
 
             {/* Gallery / Carousel */}
             {project.generations && project.generations.length > 0 && (
-              <div className="w-full max-w-5xl overflow-x-auto pb-2">
+              <div className="w-full max-w-6xl overflow-x-auto pb-4 scrollbar-hide">
                 <div className="flex gap-4 px-2">
                   {/* Original */}
                   <button
                     onClick={() => setActiveImage(project.originalImageUrl)}
-                    className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                      activeImage === project.originalImageUrl ? "border-purple-500 ring-2 ring-purple-500/50" : "border-transparent opacity-70 hover:opacity-100"
+                    className={`relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                      activeImage === project.originalImageUrl 
+                        ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
+                        : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
                     }`}
                   >
                     <img src={project.originalImageUrl} alt="Original" className="h-full w-full object-cover" />
-                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-[10px] text-white">Original</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                    <span className="absolute bottom-2 left-2 text-[10px] font-medium text-white">Original</span>
                   </button>
 
                   {/* Generations */}
@@ -306,19 +294,22 @@ export default function ProjectDetailsPage() {
                     <div key={gen.id} className="relative group">
                       <button
                         onClick={() => setActiveImage(gen.imageUrl)}
-                        className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                          activeImage === gen.imageUrl ? "border-purple-500 ring-2 ring-purple-500/50" : "border-transparent opacity-70 hover:opacity-100"
+                        className={`relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                          activeImage === gen.imageUrl 
+                            ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
+                            : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
                         }`}
                       >
                         <img src={gen.imageUrl} alt={`Version ${idx + 1}`} className="h-full w-full object-cover" />
-                        <span className="absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-[10px] text-white">V{idx + 1}</span>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                        <span className="absolute bottom-2 left-2 text-[10px] font-medium text-white">Version {idx + 1}</span>
                       </button>
                       <button
                         onClick={(e) => handleDeleteImage(e, gen.id)}
                         className="absolute -top-2 -right-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 group-hover:flex"
                         title="Supprimer"
                       >
-                        ×
+                        <X className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
@@ -329,7 +320,7 @@ export default function ProjectDetailsPage() {
         </div>
 
         {/* Right Panel - AI Assistant (30%) */}
-        <div className="w-[400px] flex-shrink-0 bg-black border-l border-white/10">
+        <div className="w-[400px] flex-shrink-0 bg-black/80 border-l border-white/10 backdrop-blur-xl">
           <ChatInterface 
             projectId={project.id!} 
             initialAnalysis={project.analysis}
@@ -339,59 +330,86 @@ export default function ProjectDetailsPage() {
       </div>
 
       {/* Shopping List Modal Overlay */}
-      {showShoppingList && project.products && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4 bg-black/40">
-              <h3 className="flex items-center gap-2 text-xl font-bold text-white">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/20 text-purple-400">🛍️</span>
-                Liste de Shopping
-              </h3>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-gray-400 hover:text-white"
-                onClick={() => setShowShoppingList(false)}
-              >
-                <X className="h-6 w-6" />
-              </Button>
-            </div>
-
-            {/* Modal Content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {project.products.map((product: any, i: number) => (
-                  <a 
-                    key={i}
-                    href={`https://www.amazon.fr/s?k=${encodeURIComponent(product.searchTerm)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-start gap-4 rounded-lg border border-white/5 bg-black/20 p-4 transition-all hover:border-purple-500/50 hover:bg-purple-500/10"
-                  >
-                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-white/10 text-2xl">
-                      {product.category === "Sofa" ? "🛋️" : 
-                       product.category === "Lamp" ? "💡" : 
-                       product.category === "Rug" ? "🧶" : "📦"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="truncate font-medium text-white group-hover:text-purple-300">
-                        {product.name}
-                      </h4>
-                      <p className="line-clamp-2 text-xs text-gray-400">
-                        {product.description}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1 text-xs font-medium text-purple-400">
-                        Voir sur Amazon <ArrowRight className="h-3 w-3" />
-                      </div>
-                    </div>
-                  </a>
-                ))}
+      <AnimatePresence>
+        {showShoppingList && project.products && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative w-full max-w-5xl max-h-[85vh] overflow-hidden rounded-3xl border border-white/10 bg-[#0A0A0A] shadow-2xl flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-white/10 px-8 py-6 bg-black/20">
+                <div>
+                  <h3 className="flex items-center gap-3 text-2xl font-bold text-white font-outfit">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/20">🛍️</span>
+                    Liste de Shopping
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-400 ml-14">Produits recommandés pour votre design</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full text-gray-400 hover:bg-white/10 hover:text-white"
+                  onClick={() => setShowShoppingList(false)}
+                >
+                  <X className="h-6 w-6" />
+                </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+              {/* Modal Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {project.products.map((product: any, i: number) => (
+                    <a 
+                      key={i}
+                      href={`https://www.amazon.fr/s?k=${encodeURIComponent(product.searchTerm)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex flex-col gap-4 rounded-2xl border border-white/5 bg-white/5 p-5 transition-all duration-300 hover:border-purple-500/30 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/5"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/40 text-2xl border border-white/5">
+                          {product.category === "Sofa" ? "🛋️" : 
+                           product.category === "Lamp" ? "💡" : 
+                           product.category === "Rug" ? "🧶" : "📦"}
+                        </div>
+                        <div className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-medium text-gray-400">
+                          {product.category}
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
+                          {product.name}
+                        </h4>
+                        <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed">
+                          {product.description}
+                        </p>
+                      </div>
+                      
+                      <div className="mt-auto pt-4 border-t border-white/5">
+                        <div className="flex items-center justify-between text-xs font-medium">
+                          <span className="text-gray-500">Disponible sur Amazon</span>
+                          <span className="flex items-center gap-1 text-purple-400 group-hover:translate-x-1 transition-transform">
+                            Voir l'offre <ArrowRight className="h-3 w-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/landing/navbar";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,7 +23,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // Redirect to dashboard
+      router.push("/dashboard");
     } catch (err: any) {
       console.error("Login error:", err);
       setError("Email ou mot de passe incorrect.");
@@ -46,62 +46,81 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white selection:bg-purple-500/30">
       <Navbar />
-      <div className="flex min-h-screen items-center justify-center px-4 pt-20">
-        <div className="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
-          <h1 className="mb-2 text-2xl font-bold text-center">Bon retour</h1>
-          <p className="mb-6 text-center text-gray-400">
-            Connectez-vous pour accéder à vos projets.
-          </p>
+      
+      {/* Background Effects */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-purple-900/20 blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[500px] w-[500px] rounded-full bg-blue-900/10 blur-[100px]" />
+      </div>
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 pt-20">
+        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-black/40 p-8 backdrop-blur-xl shadow-2xl">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-white/10">
+              <Sparkles className="h-6 w-6 text-purple-400" />
+            </div>
+            <h1 className="mb-2 font-outfit text-3xl font-bold text-white">Bon retour</h1>
+            <p className="text-gray-400">Connectez-vous à votre espace créatif.</p>
+          </div>
           
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+          <form onSubmit={handleEmailLogin} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-300 ml-1">Email</label>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black/50 px-4 py-2 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all focus:border-purple-500/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                 placeholder="jean@exemple.com"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Mot de passe</label>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-300 ml-1">Mot de passe</label>
+                <Link href="#" className="text-xs text-purple-400 hover:text-purple-300">
+                  Oublié ?
+                </Link>
+              </div>
               <input
                 type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black/50 px-4 py-2 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white placeholder-gray-500 transition-all focus:border-purple-500/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
                 placeholder="••••••••"
               />
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <div className="rounded-lg bg-red-500/10 p-3 text-sm text-red-400 border border-red-500/20 text-center">
+                {error}
+              </div>
+            )}
 
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 py-6 text-base font-medium hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/20"
             >
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
               Se connecter
             </Button>
           </form>
 
-          <div className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-xs text-gray-500">OU</span>
-            <div className="h-px flex-1 bg-white/10" />
+          <div className="my-8 flex items-center gap-4">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Ou continuer avec</span>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
 
           <Button 
             onClick={handleGoogleLogin} 
             disabled={loading}
             variant="outline"
-            className="w-full gap-2 border-white/10 bg-white/5 text-white hover:bg-white/10"
+            className="w-full gap-3 rounded-xl border-white/10 bg-white/5 py-6 text-white hover:bg-white/10 hover:text-white transition-all hover:scale-[1.02]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path
@@ -121,13 +140,13 @@ export default function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            Continuer avec Google
+            Google
           </Button>
           
-          <p className="mt-6 text-center text-sm text-gray-400">
+          <p className="mt-8 text-center text-sm text-gray-400">
             Pas encore de compte ?{" "}
-            <Link href="/signup" className="text-purple-400 hover:underline">
-              S'inscrire
+            <Link href="/signup" className="font-medium text-purple-400 hover:text-purple-300 hover:underline">
+              Créer un compte
             </Link>
           </p>
         </div>

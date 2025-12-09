@@ -2,108 +2,99 @@
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { ArrowRight, Upload } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { BeforeAfterSlider } from "@/components/ui/before-after";
 
 export function Hero() {
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black pt-16">
-      {/* Background Gradients */}
-      <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-purple-500/20 blur-3xl" />
-      <div className="absolute top-1/2 -right-24 h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />
+    <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black pt-32 pb-20">
+      {/* Cinematic Background Gradients */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-[1000px] rounded-[100%] bg-purple-900/20 blur-[120px]" />
+      <div className="absolute bottom-0 left-0 h-[600px] w-[600px] rounded-full bg-blue-900/10 blur-[100px]" />
       
       <div className="container relative z-10 mx-auto px-4 text-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <h1 className="mx-auto max-w-4xl bg-gradient-to-b from-white to-gray-400 bg-clip-text text-5xl font-bold tracking-tight text-transparent sm:text-7xl">
-            Réinventez votre intérieur avec l'Intelligence Artificielle
+          <div className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-md">
+            <Sparkles className="h-3 w-3 text-purple-400" />
+            <span className="text-xs font-medium text-purple-200">Nouvelle Génération d'IA Design</span>
+          </div>
+
+          <h1 className="mx-auto max-w-5xl font-outfit text-6xl font-medium tracking-tight text-white sm:text-8xl">
+            Réinventez votre intérieur <br />
+            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+              en une seconde.
+            </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-400">
-            Transformez une simple photo en un projet de rénovation complet.
-            Design, estimation des coûts et visualisation 3D instantanée.
+          
+          <p className="mx-auto mt-8 max-w-2xl text-lg text-gray-400 font-light leading-relaxed">
+            L'alliance parfaite entre design d'intérieur et intelligence artificielle.
+            Visualisez, estimez et réalisez vos projets avec une précision chirurgicale.
           </p>
           
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="/app">
-              <Button size="lg" className="h-12 gap-2 bg-gradient-to-r from-purple-600 to-pink-600 px-8 text-lg hover:from-purple-700 hover:to-pink-700">
-                <Upload className="h-5 w-5" />
-                Commencer un projet
+              <Button size="lg" className="h-14 rounded-full bg-white px-8 text-lg font-medium text-black hover:bg-gray-200 shadow-[0_0_30px_-5px_rgba(255,255,255,0.3)] transition-all hover:scale-105">
+                Commencer gratuitement
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link href="/#demo">
+              <Button variant="ghost" size="lg" className="h-14 rounded-full px-8 text-lg text-gray-400 hover:text-white hover:bg-white/5">
+                Voir la démo
               </Button>
             </Link>
           </div>
         </motion.div>
 
-        {/* Floating UI Mockup */}
+        {/* Floating UI Mockup - Glassmorphism Masterpiece */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="mx-auto mt-20 max-w-5xl overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur-sm"
+          initial={{ opacity: 0, y: 60, rotateX: 20 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+          className="perspective-1000 mx-auto mt-24 max-w-6xl"
         >
-          <div className="relative aspect-video w-full bg-gray-900/50">
-             <BeforeAfterSlider 
-                beforeImage="/demo/after.jpg"
-                afterImage="/demo/before.jpg"
-                className="h-full w-full"
-             />
-             
-             {/* Cost Estimation Badge (Desktop) */}
-             <motion.div 
-               initial={{ opacity: 0, scale: 0.8 }}
-               animate={{ opacity: 1, scale: 1 }}
-               transition={{ delay: 1, duration: 0.5 }}
-               className="hidden md:block absolute bottom-6 right-6 z-20 max-w-xs rounded-xl border border-white/20 bg-black/80 p-5 backdrop-blur-md shadow-2xl"
-             >
-               <div className="flex items-center justify-between mb-2">
-                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estimation Travaux</p>
-                 <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-               </div>
-               
-               <div className="flex items-baseline gap-2 mb-3">
-                 <span className="text-3xl font-bold text-white">12 500 €</span>
-                 <span className="text-sm font-medium text-gray-400">TTC</span>
-               </div>
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gray-900/50 shadow-[0_0_50px_-10px_rgba(168,85,247,0.15)] backdrop-blur-sm">
+             {/* Window Controls */}
+             <div className="absolute top-0 left-0 right-0 z-20 flex h-10 items-center gap-2 border-b border-white/5 bg-black/40 px-4">
+               <div className="h-3 w-3 rounded-full bg-red-500/20" />
+               <div className="h-3 w-3 rounded-full bg-yellow-500/20" />
+               <div className="h-3 w-3 rounded-full bg-green-500/20" />
+             </div>
 
-               <div className="space-y-2 border-t border-white/10 pt-3">
-                 <div className="flex justify-between text-sm">
-                   <span className="text-gray-300">Sols (Parquet Chêne)</span>
-                   <span className="font-mono text-gray-500">4 200 €</span>
-                 </div>
-                 <div className="flex justify-between text-sm">
-                   <span className="text-gray-300">Peinture & Finitions</span>
-                   <span className="font-mono text-gray-500">3 800 €</span>
-                 </div>
-                 <div className="flex justify-between text-sm">
-                   <span className="text-gray-300">Mobilier & Déco</span>
-                   <span className="font-mono text-gray-500">4 500 €</span>
-                 </div>
-               </div>
+             <div className="relative aspect-[16/9] w-full pt-10">
+               <BeforeAfterSlider 
+                  beforeImage="/demo/after.jpg"
+                  afterImage="/demo/before.jpg"
+                  className="h-full w-full"
+               />
                
-               <p className="mt-3 text-[10px] text-gray-500 leading-tight">
-                 *Estimation basée sur les prix moyens du marché en France (2025).
-               </p>
-             </motion.div>
-
-             {/* Cost Estimation Badge (Mobile) */}
-             <motion.div 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: 1, duration: 0.5 }}
-               className="md:hidden absolute bottom-4 right-4 z-20 rounded-lg border border-white/20 bg-black/80 px-3 py-2 backdrop-blur-md shadow-xl"
-             >
-               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estimation</p>
-               <div className="flex items-baseline gap-1">
-                 <span className="text-lg font-bold text-white">12 500 €</span>
-               </div>
-             </motion.div>
+               {/* Floating Badge */}
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                 animate={{ opacity: 1, scale: 1, x: 0 }}
+                 transition={{ delay: 1.2, duration: 0.5 }}
+                 className="absolute bottom-8 right-8 z-30 hidden md:block"
+               >
+                 <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/60 p-4 backdrop-blur-xl shadow-2xl">
+                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+                     <span className="text-lg font-bold">€</span>
+                   </div>
+                   <div>
+                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Estimation</p>
+                     <p className="text-2xl font-bold text-white">12 500 €</p>
+                   </div>
+                 </div>
+               </motion.div>
+             </div>
           </div>
-          <p className="py-3 text-center text-sm text-gray-400 italic">
-            *Glissez pour voir la transformation générée par l'IA
-          </p>
+          
+          {/* Reflection Effect */}
+          <div className="absolute -bottom-20 left-0 right-0 h-20 bg-gradient-to-t from-black to-transparent opacity-50" />
         </motion.div>
       </div>
     </section>
