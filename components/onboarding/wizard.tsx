@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, Check, ArrowRight, Loader2, Sparkles, Home, Utensils, Bath, Bed, Sofa, Monitor, Trees, Building } from "lucide-react";
+import { Upload, X, Check, ArrowRight, Loader2, Sparkles, Home, Utensils, Bath, Bed, Sofa, Monitor, Trees, Building, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -16,9 +16,12 @@ type WizardData = {
   image: File | null;
   imageUrl?: string;
   roomType: string;
+  designMode: "style" | "custom"; // Choose between preset style or custom prompt
+  customPrompt: string; // User's detailed custom prompt
   style: string;
   budget: string;
   name: string;
+  includeShoppingList: boolean;
 };
 
 // --- Constants ---
@@ -40,26 +43,26 @@ const EXTERIOR_TYPES = [
 ];
 
 const STYLES = [
-  { id: "japandi", label: "Japandi", description: "Zen, minimaliste, naturel", image: "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80" },
-  { id: "haussmanien", label: "Haussmannien", description: "Moulures, parquet, élégance", image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=800&q=80" },
-  { id: "vintage", label: "Vintage", description: "Rétro, nostalgique, unique", image: "https://images.unsplash.com/photo-1559599238-308793637427?auto=format&fit=crop&w=800&q=80" },
+  { id: "japandi", label: "Japandi", description: "Zen, minimaliste, naturel", image: "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=800&q=80" },
+  { id: "haussmanien", label: "Haussmannien", description: "Moulures, parquet, élégance", image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80" },
+  { id: "vintage", label: "Vintage", description: "Rétro, nostalgique, unique", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80" },
   { id: "mid_century_modern", label: "Mid-Century Modern", description: "Années 50, bois, organique", image: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=800&q=80" },
-  { id: "scandinavian", label: "Scandinave", description: "Bois clair, cosy, lumineux", image: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80" },
-  { id: "minimalist", label: "Minimaliste", description: "Épuré, essentiel, calme", image: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=800&q=80" },
-  { id: "industrial", label: "Industriel", description: "Briques, métal, brut", image: "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=800&q=80" },
-  { id: "bohemian", label: "Bohème", description: "Plantes, textures, voyage", image: "https://images.unsplash.com/photo-1522444195799-478538b28823?auto=format&fit=crop&w=800&q=80" },
-  { id: "art_deco", label: "Art Déco", description: "Géométrique, doré, luxe", image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80" },
-  { id: "farmhouse", label: "Rustique Farmhouse", description: "Campagne, bois, chaleureux", image: "https://images.unsplash.com/photo-1560185007-cde436f6a4d0?auto=format&fit=crop&w=800&q=80" },
-  { id: "baroque", label: "Classique Baroque", description: "Ornements, riche, théâtral", image: "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=800&q=80" },
-  { id: "contemporary", label: "Contemporain", description: "Actuel, audacieux, design", image: "https://images.unsplash.com/photo-1600607686527-6fb886090705?auto=format&fit=crop&w=800&q=80" },
-  { id: "wabisabi", label: "Wabi-Sabi", description: "Imparfait, brut, serein", image: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80" },
-  { id: "mediterranean", label: "Méditerranéen", description: "Soleil, terre cuite, bleu", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80" },
-  { id: "colonial", label: "Colonial", description: "Exotique, bois sombre, voyage", image: "https://images.unsplash.com/photo-1560184897-ae75f418493e?auto=format&fit=crop&w=800&q=80" },
-  { id: "shabby_chic", label: "Shabby Chic", description: "Romantique, patiné, doux", image: "https://images.unsplash.com/photo-1560185008-b033106af5c3?auto=format&fit=crop&w=800&q=80" },
-  { id: "maximalist", label: "Maximaliste", description: "Audacieux, coloré, riche", image: "https://images.unsplash.com/photo-1560185009-5bf9f2849488?auto=format&fit=crop&w=800&q=80" },
-  { id: "cottagecore", label: "Cottagecore", description: "Nature, floral, nostalgie", image: "https://images.unsplash.com/photo-1560184897-ae75f418493e?auto=format&fit=crop&w=800&q=80" },
-  { id: "modern_glam", label: "Modern Glam", description: "Chic, brillant, sophistiqué", image: "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=800&q=80" },
-  { id: "brutalist", label: "Brutalist", description: "Béton, formes, architectural", image: "https://images.unsplash.com/photo-1560185007-cde436f6a4d0?auto=format&fit=crop&w=800&q=80" },
+  { id: "scandinavian", label: "Scandinave", description: "Bois clair, cosy, lumineux", image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80" },
+  { id: "minimalist", label: "Minimaliste", description: "Épuré, essentiel, calme", image: "https://images.unsplash.com/photo-1600210491892-03d54c0aaf87?auto=format&fit=crop&w=800&q=80" },
+  { id: "industrial", label: "Industriel", description: "Briques, métal, brut", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80" },
+  { id: "bohemian", label: "Bohème", description: "Plantes, textures, voyage", image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=800&q=80" },
+  { id: "art_deco", label: "Art Déco", description: "Géométrique, doré, luxe", image: "https://images.unsplash.com/photo-1600566752355-35792bedcfea?auto=format&fit=crop&w=800&q=80" },
+  { id: "farmhouse", label: "Rustique Farmhouse", description: "Campagne, bois, chaleureux", image: "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=800&q=80" },
+  { id: "baroque", label: "Classique Baroque", description: "Ornements, riche, théâtral", image: "https://images.unsplash.com/photo-1551516594-56cb78394645?auto=format&fit=crop&w=800&q=80" },
+  { id: "contemporary", label: "Contemporain", description: "Actuel, audacieux, design", image: "https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=800&q=80" },
+  { id: "wabisabi", label: "Wabi-Sabi", description: "Imparfait, brut, serein", image: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?auto=format&fit=crop&w=800&q=80" },
+  { id: "mediterranean", label: "Méditerranéen", description: "Soleil, terre cuite, bleu", image: "https://images.unsplash.com/photo-1600566752547-33a6b00e24b6?auto=format&fit=crop&w=800&q=80" },
+  { id: "colonial", label: "Colonial", description: "Exotique, bois sombre, voyage", image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" },
+  { id: "shabby_chic", label: "Shabby Chic", description: "Romantique, patiné, doux", image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80" },
+  { id: "maximalist", label: "Maximaliste", description: "Audacieux, coloré, riche", image: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=800&q=80" },
+  { id: "cottagecore", label: "Cottagecore", description: "Nature, floral, nostalgie", image: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80" },
+  { id: "modern_glam", label: "Modern Glam", description: "Chic, brillant, sophistiqué", image: "https://images.unsplash.com/photo-1600210491369-e753d80a41f3?auto=format&fit=crop&w=800&q=80" },
+  { id: "brutalist", label: "Brutalist", description: "Béton, formes, architectural", image: "https://images.unsplash.com/photo-1600607687126-8a55e32e0d63?auto=format&fit=crop&w=800&q=80" },
 ];
 
 const EXTERIOR_STYLES = [
@@ -85,14 +88,17 @@ export function OnboardingWizard() {
     projectType: "interior",
     image: null,
     roomType: "",
+    designMode: "style",
+    customPrompt: "",
     style: "",
     budget: "2000",
     name: "",
+    includeShoppingList: true,
   });
   const { user } = useAuth();
   const router = useRouter();
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 7));
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, 8));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const updateData = (key: keyof WizardData, value: any) => {
@@ -106,12 +112,12 @@ export function OnboardingWizard() {
 
       {/* Progress Bar */}
       <div className="relative z-10 mb-12 flex w-full max-w-lg items-center justify-between text-xs font-medium text-gray-400">
-        <span className="font-outfit tracking-wider uppercase">Étape {step} / 7</span>
+        <span className="font-outfit tracking-wider uppercase">Étape {step} / 8</span>
         <div className="h-1.5 flex-1 mx-6 overflow-hidden rounded-full bg-white/5 border border-white/5">
           <motion.div 
             className="h-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
             initial={{ width: "0%" }}
-            animate={{ width: `${(step / 7) * 100}%` }}
+            animate={{ width: `${(step / 8) * 100}%` }}
             transition={{ duration: 0.5, ease: "circOut" }}
           />
         </div>
@@ -120,8 +126,9 @@ export function OnboardingWizard() {
           step === 2 ? "Photo" :
           step === 3 ? "Vérification" :
           step === 4 ? "Pièce" :
-          step === 5 ? "Style" :
-          step === 6 ? "Budget" : "Création"
+          step === 5 ? "Mode" :
+          step === 6 ? "Design" :
+          step === 7 ? "Options" : "Création"
         }</span>
       </div>
 
@@ -167,8 +174,19 @@ export function OnboardingWizard() {
             />
           )}
           {step === 5 && (
-            <StepStyle 
+            <StepDesignMode 
               key="step5" 
+              selected={data.designMode}
+              onSelect={(mode) => {
+                updateData("designMode", mode);
+                nextStep();
+              }}
+              onBack={prevStep}
+            />
+          )}
+          {step === 6 && data.designMode === "style" && (
+            <StepStyle 
+              key="step6style" 
               projectType={data.projectType}
               roomType={data.roomType}
               selected={data.style}
@@ -177,18 +195,30 @@ export function OnboardingWizard() {
               onNext={nextStep}
             />
           )}
-          {step === 6 && (
-            <StepBudget 
-              key="step6" 
-              selected={data.budget}
-              onSelect={(budget) => updateData("budget", budget)}
+          {step === 6 && data.designMode === "custom" && (
+            <StepCustomPrompt 
+              key="step6custom" 
+              value={data.customPrompt}
+              roomType={data.roomType}
+              onChange={(prompt) => updateData("customPrompt", prompt)}
               onBack={prevStep}
               onNext={nextStep}
             />
           )}
           {step === 7 && (
-            <StepAnalysis 
+            <StepBudget 
               key="step7" 
+              selected={data.budget}
+              onSelect={(budget) => updateData("budget", budget)}
+              includeShoppingList={data.includeShoppingList}
+              onToggleShoppingList={(val) => updateData("includeShoppingList", val)}
+              onBack={prevStep}
+              onNext={nextStep}
+            />
+          )}
+          {step === 8 && (
+            <StepAnalysis 
+              key="step8" 
               data={data}
               user={user}
               onComplete={(projectId) => {
@@ -484,7 +514,309 @@ function StepRoom({ projectType, selected, onSelect, onBack, onNext }: { project
   );
 }
 
-// --- Step 5: Style Selection ---
+// --- Step 5: Design Mode Selection ---
+function StepDesignMode({ selected, onSelect, onBack }: { 
+  selected: "style" | "custom", 
+  onSelect: (mode: "style" | "custom") => void, 
+  onBack: () => void 
+}) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col items-center"
+    >
+      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Comment voulez-vous designer ?</h2>
+      <p className="mb-12 text-gray-400">Choisissez votre méthode de création</p>
+
+      <div className="grid gap-6 md:grid-cols-2 max-w-3xl w-full">
+        {/* Option 1: Style Preset */}
+        <button
+          onClick={() => onSelect("style")}
+          className={cn(
+            "group relative overflow-hidden rounded-3xl border p-8 text-left transition-all duration-300",
+            selected === "style" 
+              ? "border-purple-500/50 bg-purple-500/10 shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]" 
+              : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+          )}
+        >
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-3xl shadow-lg shadow-purple-500/25">
+            🎨
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Choisir un style</h3>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Sélectionnez parmi nos 20+ styles prédéfinis : Japandi, Scandinave, Industriel, Bohème...
+          </p>
+          <div className="mt-6 flex items-center gap-2 text-sm font-medium text-purple-400">
+            <Sparkles className="h-4 w-4" />
+            Recommandé pour débuter
+          </div>
+          {selected === "style" && (
+            <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white">
+              <Check className="h-4 w-4" />
+            </div>
+          )}
+        </button>
+
+        {/* Option 2: Custom Prompt */}
+        <button
+          onClick={() => onSelect("custom")}
+          className={cn(
+            "group relative overflow-hidden rounded-3xl border p-8 text-left transition-all duration-300",
+            selected === "custom" 
+              ? "border-purple-500/50 bg-purple-500/10 shadow-[0_0_30px_-5px_rgba(168,85,247,0.3)]" 
+              : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10"
+          )}
+        >
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-3xl shadow-lg shadow-blue-500/25">
+            ✍️
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Écrire mon idée</h3>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            Décrivez librement votre vision : couleurs, ambiance, matériaux, inspirations...
+          </p>
+          <div className="mt-6 flex items-center gap-2 text-sm font-medium text-blue-400">
+            <Wand2 className="h-4 w-4" />
+            Pour les créatifs
+          </div>
+          {selected === "custom" && (
+            <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-purple-500 text-white">
+              <Check className="h-4 w-4" />
+            </div>
+          )}
+        </button>
+      </div>
+
+      <div className="mt-12 flex w-full max-w-4xl justify-start">
+        <Button variant="ghost" onClick={onBack} className="text-gray-400 hover:text-white rounded-full px-6">
+          Retour
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// --- Step 5b: Custom Prompt (with AI Enhancement) ---
+function StepCustomPrompt({ value, roomType, onChange, onBack, onNext }: { 
+  value: string, 
+  roomType: string,
+  onChange: (prompt: string) => void, 
+  onBack: () => void, 
+  onNext: () => void 
+}) {
+  const [charCount, setCharCount] = useState(value.length);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<{
+    score: number;
+    missingElements: string[];
+    suggestions: string[];
+  } | null>(null);
+  
+  const examples = [
+    "Un intérieur chaleureux avec des tons terracotta, du bois naturel et beaucoup de plantes vertes. Ambiance cosy et lumineuse.",
+    "Style loft new-yorkais avec briques apparentes, métal noir mat, béton ciré au sol et grandes fenêtres industrielles.",
+    "Ambiance zen japonaise minimaliste avec du bambou, des couleurs neutres beige et blanc, éclairage tamisé et mobilier bas.",
+    "Décoration bohème avec tapis berbères colorés, macramé mural, coussins ethniques et suspension en rotin.",
+    "Design scandinave épuré avec bois clair de chêne, blanc immaculé, touches de vert sauge et textiles en lin.",
+  ];
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    onChange(text);
+    setCharCount(text.length);
+    setAnalysis(null); // Reset analysis when text changes
+  };
+
+  const applyExample = (example: string) => {
+    onChange(example);
+    setCharCount(example.length);
+    setAnalysis(null);
+  };
+
+  const analyzePrompt = async () => {
+    if (value.length < 20) return;
+    
+    setAnalyzing(true);
+    try {
+      const response = await fetch("/api/enhance-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          userPrompt: value, 
+          roomType 
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAnalysis({
+          score: data.score || 5,
+          missingElements: data.missingElements || [],
+          suggestions: data.suggestions || [],
+        });
+      }
+    } catch (e) {
+      console.error("Failed to analyze prompt:", e);
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Debounced analysis
+  useEffect(() => {
+    if (value.length >= 30) {
+      const timer = setTimeout(analyzePrompt, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [value]);
+
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return "text-green-400";
+    if (score >= 5) return "text-yellow-400";
+    return "text-red-400";
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 8) return "Excellent !";
+    if (score >= 6) return "Bon";
+    if (score >= 4) return "Peut être amélioré";
+    return "Trop vague";
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex flex-col items-center w-full"
+    >
+      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Décrivez votre vision</h2>
+      <p className="mb-8 text-gray-400">Plus vous êtes précis, meilleur sera le résultat</p>
+
+      <div className="w-full max-w-2xl space-y-6">
+        {/* Main textarea */}
+        <div className="relative">
+          <textarea
+            value={value}
+            onChange={handleChange}
+            placeholder={`Décrivez votre ${roomType} idéal : couleurs, matériaux, ambiance, style de meubles...`}
+            className="h-44 w-full resize-none rounded-2xl border border-white/10 bg-black/50 p-6 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+          />
+          <div className="absolute bottom-4 right-4 flex items-center gap-3">
+            {analyzing && (
+              <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+            )}
+            <span className={cn(
+              "text-xs",
+              charCount < 20 ? "text-red-400" : charCount < 50 ? "text-yellow-400" : "text-green-400"
+            )}>
+              {charCount} caractères
+            </span>
+          </div>
+        </div>
+
+        {/* Analysis Results */}
+        {analysis && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Qualité de la description</span>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {[...Array(10)].map((_, i) => (
+                    <div 
+                      key={i}
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        i < analysis.score ? "bg-purple-500" : "bg-white/10"
+                      )}
+                    />
+                  ))}
+                </div>
+                <span className={cn("text-sm font-medium", getScoreColor(analysis.score))}>
+                  {getScoreLabel(analysis.score)}
+                </span>
+              </div>
+            </div>
+            
+            {analysis.missingElements.length > 0 && (
+              <div className="text-xs text-gray-400">
+                <span className="text-yellow-400">💡 Éléments à ajouter : </span>
+                {analysis.missingElements.join(", ")}
+              </div>
+            )}
+            
+            {analysis.suggestions.length > 0 && analysis.score < 7 && (
+              <div className="space-y-1">
+                {analysis.suggestions.slice(0, 2).map((suggestion, i) => (
+                  <p key={i} className="text-xs text-gray-500">• {suggestion}</p>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* Quick elements to add */}
+        <div>
+          <p className="text-sm text-gray-400 mb-3">✨ Cliquez pour ajouter à votre description</p>
+          <div className="flex flex-wrap gap-2">
+            {["tons chauds", "bois naturel", "lumière douce", "minimaliste", "plantes vertes", "touches dorées", "textures naturelles", "ambiance cosy"].map((tag) => (
+              <button
+                key={tag}
+                onClick={() => {
+                  const newValue = value + (value.endsWith(" ") || value === "" ? "" : ", ") + tag;
+                  onChange(newValue);
+                  setCharCount(newValue.length);
+                }}
+                className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs text-purple-300 hover:bg-purple-500/20 transition-colors"
+              >
+                + {tag}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Examples */}
+        <div>
+          <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
+            <Sparkles className="h-3 w-3 text-purple-400" />
+            Ou utilisez un exemple comme base
+          </p>
+          <div className="space-y-2">
+            {examples.slice(0, 3).map((example, i) => (
+              <button
+                key={i}
+                onClick={() => applyExample(example)}
+                className="w-full text-left rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 flex w-full max-w-4xl justify-between">
+        <Button variant="ghost" onClick={onBack} className="text-gray-400 hover:text-white rounded-full px-6">
+          Retour
+        </Button>
+        <Button 
+          onClick={onNext}
+          disabled={value.length < 30 || (analysis && analysis.score < 3)}
+          className="h-12 gap-2 rounded-full bg-white text-black px-8 hover:bg-gray-200 shadow-lg shadow-white/10 transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+        >
+          {analysis && analysis.score >= 7 ? "Parfait ! Continuer" : "Continuer"} <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// --- Step 6: Style Selection ---
 function StepStyle({ projectType, roomType, selected, onSelect, onBack, onNext }: { projectType: "interior" | "exterior", roomType: string, selected: string, onSelect: (id: string) => void, onBack: () => void, onNext: () => void }) {
   const currentStyles = projectType === "exterior" ? EXTERIOR_STYLES : STYLES;
 
@@ -543,7 +875,14 @@ function StepStyle({ projectType, roomType, selected, onSelect, onBack, onNext }
 }
 
 // --- Step 5: Budget Selection ---
-function StepBudget({ selected, onSelect, onBack, onNext }: { selected: string, onSelect: (budget: string) => void, onBack: () => void, onNext: () => void }) {
+function StepBudget({ selected, onSelect, includeShoppingList, onToggleShoppingList, onBack, onNext }: { 
+  selected: string, 
+  onSelect: (budget: string) => void, 
+  includeShoppingList: boolean,
+  onToggleShoppingList: (val: boolean) => void,
+  onBack: () => void, 
+  onNext: () => void 
+}) {
   const [isUnlimited, setIsUnlimited] = useState(selected === "unlimited");
   const [value, setValue] = useState(selected === "unlimited" ? 5000 : parseInt(selected) || 2000);
 
@@ -574,11 +913,39 @@ function StepBudget({ selected, onSelect, onBack, onNext }: { selected: string, 
       exit={{ opacity: 0, x: -20 }}
       className="flex flex-col items-center"
     >
-      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Quel est votre budget ?</h2>
-      <p className="mb-12 text-gray-400">Nous sélectionnerons des meubles adaptés à votre enveloppe.</p>
+      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Préférences du projet</h2>
+      <p className="mb-12 text-gray-400">Configurez votre budget et vos options.</p>
 
-      <div className="w-full max-w-lg space-y-10 rounded-[2rem] border border-white/10 bg-black/40 p-10 backdrop-blur-md shadow-2xl">
+      <div className="w-full max-w-lg space-y-8 rounded-[2rem] border border-white/10 bg-black/40 p-10 backdrop-blur-md shadow-2xl">
         
+        {/* Shopping List Toggle */}
+        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/20 border border-purple-500/30">
+              <span className="text-xl">🛍️</span>
+            </div>
+            <div>
+              <span className="font-medium text-white">Liste de shopping</span>
+              <p className="text-xs text-gray-400">Produits recommandés avec liens d&apos;achat</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => onToggleShoppingList(!includeShoppingList)}
+            className={cn(
+              "relative h-8 w-14 rounded-full transition-all duration-300",
+              includeShoppingList ? "bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]" : "bg-gray-700"
+            )}
+          >
+            <span className={cn(
+              "absolute left-1 top-1 h-6 w-6 rounded-full bg-white transition-transform duration-300 shadow-sm",
+              includeShoppingList ? "translate-x-6" : "translate-x-0"
+            )} />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-white/5" />
+
         {/* Unlimited Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -694,28 +1061,35 @@ function StepAnalysis({ data, user, onComplete }: { data: WizardData, user: any,
             console.error("Planning agent failed", e);
         }
 
-        // 3. Shopping Agent (Source)
-        setStatus(`Le Shopper cherche vos meubles ${data.style}...`);
-        setProgress(50);
-        
-        let selectedProducts = [];
-        try {
-          const shopResponse = await fetch("/api/shop", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                roomType: data.roomType, 
-                style: data.style,
-                furnitureList: furniturePlan,
-                budget: data.budget
-            }),
-          });
-          if (shopResponse.ok) {
-            const shopData = await shopResponse.json();
-            selectedProducts = shopData.products || [];
+        // 3. Shopping Agent (Source) - Only if user opted in
+        let selectedProducts: any[] = [];
+        if (data.includeShoppingList) {
+          setStatus(`Le Shopper cherche vos meubles ${data.style}...`);
+          setProgress(50);
+          
+          try {
+            const shopResponse = await fetch("/api/shop", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ 
+                  roomType: data.roomType, 
+                  style: data.style,
+                  furnitureList: furniturePlan,
+                  budget: data.budget,
+                  persistImages: true
+              }),
+            });
+            if (shopResponse.ok) {
+              const shopData = await shopResponse.json();
+              selectedProducts = shopData.products || [];
+              console.log(`Shopping: ${shopData.stats?.withLinks || 0} products with links, ${shopData.stats?.withPrices || 0} with prices`);
+            }
+          } catch (e) {
+            console.error("Shopping agent failed", e);
           }
-        } catch (e) {
-          console.error("Shopping agent failed", e);
+        } else {
+          setStatus("Préparation de la génération...");
+          setProgress(50);
         }
 
         // 4. Generate Initial Concept with Products
@@ -742,7 +1116,12 @@ function StepAnalysis({ data, user, onComplete }: { data: WizardData, user: any,
               console.log(`Wizard collected ${productImages.length} product images for generation.`);
             }
 
-            const prompt = `Rénovation complète en style ${data.style}. Pièce: ${data.roomType}. ${productContext} Lumineux, moderne, photoréaliste.`;
+            // Build prompt based on design mode
+            const designDescription = data.designMode === "custom" 
+              ? data.customPrompt 
+              : `style ${data.style}`;
+            
+            const prompt = `Rénovation complète: ${designDescription}. Pièce: ${data.roomType}. ${productContext} Lumineux, moderne, photoréaliste.`;
             
             const response = await fetch("/api/generate", {
                 method: "POST",
@@ -750,7 +1129,10 @@ function StepAnalysis({ data, user, onComplete }: { data: WizardData, user: any,
                 body: JSON.stringify({ 
                     prompt,
                     image: imageUrl,
-                    analysis: { roomType: data.roomType },
+                    analysis: { 
+                      roomType: data.roomType, 
+                      style: data.designMode === "custom" ? data.customPrompt : data.style 
+                    },
                     productImages // Pass the images to the generator
                 }),
             });

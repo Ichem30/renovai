@@ -53,6 +53,7 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [includeShoppingSearch, setIncludeShoppingSearch] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
         body: JSON.stringify({
           projectId,
           messages: [...messages, userMsg],
-          context: initialAnalysis
+          context: { ...initialAnalysis, includeShoppingSearch }
         }),
       });
 
@@ -117,12 +118,37 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
 
   return (
     <div className="flex h-full flex-col bg-gray-900/50 backdrop-blur-sm">
-      {/* Header */}
+      {/* Header with Shopping Toggle */}
       <div className="border-b border-white/10 p-4">
-        <h3 className="flex items-center gap-2 font-semibold text-white">
-          <Sparkles className="h-4 w-4 text-purple-400" />
-          Assistant Déco
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-semibold text-white">
+            <Sparkles className="h-4 w-4 text-purple-400" />
+            Assistant Déco
+          </h3>
+          
+          {/* Shopping Search Toggle */}
+          <button 
+            onClick={() => setIncludeShoppingSearch(!includeShoppingSearch)}
+            className={cn(
+              "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+              includeShoppingSearch 
+                ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
+                : "bg-white/5 text-gray-400 border border-white/10"
+            )}
+          >
+            <span className="text-sm">🛍️</span>
+            Recherche produits
+            <span className={cn(
+              "h-2 w-2 rounded-full transition-colors",
+              includeShoppingSearch ? "bg-green-400" : "bg-gray-500"
+            )} />
+          </button>
+        </div>
+        {includeShoppingSearch && (
+          <p className="mt-2 text-[10px] text-gray-500">
+            Les suggestions de meubles incluront des liens d&apos;achat
+          </p>
+        )}
       </div>
 
       {/* Messages */}

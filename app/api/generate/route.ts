@@ -3,43 +3,177 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
+/**
+ * SYSTEM PROMPT BUILDER
+ * Creates a highly detailed prompt that ensures:
+ * - Strict preservation of room structure and proportions
+ * - Photorealistic quality
+ * - Consistent perspective and lighting
+ */
+function buildMasterPrompt(roomType: string, style: string, userPrompt: string, hasReferenceImage: boolean): string {
+  
+  if (!hasReferenceImage) {
+    // Generation from scratch (no reference image)
+    return `Create a stunning photorealistic interior design visualization.
+
+SCENE DESCRIPTION:
+- Room type: ${roomType}
+- Design style: ${style}
+- User vision: ${userPrompt}
+
+RENDERING SPECIFICATIONS:
+- Photorealistic quality, indistinguishable from professional photography
+- Shot with a professional wide-angle lens (24mm equivalent)
+- Natural daylight flooding through windows
+- Subtle ambient shadows for depth
+- 8K resolution quality
+- Color grading: warm and inviting tones
+
+COMPOSITION:
+- Eye-level perspective at approximately 1.5m height
+- Balanced composition following rule of thirds
+- Clear focal point showcasing the main design elements
+- Depth of field: sharp foreground, slightly soft background
+
+OUTPUT: A single stunning interior design photograph that would be featured in Architectural Digest or Elle Décoration.`;
+  }
+
+  // Transformation of existing room (with reference image)
+  return `You are an elite interior design AI specializing in photorealistic room transformations.
+
+═══════════════════════════════════════════════════════════════
+                    MISSION BRIEFING
+═══════════════════════════════════════════════════════════════
+
+Transform the provided ${roomType} photograph into a ${style} design while maintaining ABSOLUTE STRUCTURAL FIDELITY.
+
+USER'S DESIGN VISION:
+"${userPrompt}"
+
+═══════════════════════════════════════════════════════════════
+                    IMMUTABLE CONSTRAINTS
+═══════════════════════════════════════════════════════════════
+
+These rules are ABSOLUTE and must NEVER be violated:
+
+📐 GEOMETRIC PRESERVATION (CRITICAL):
+   • Maintain EXACT room dimensions and proportions
+   • Preserve ALL wall positions, angles, and intersections
+   • Keep ceiling height precisely as shown
+   • Floor area must remain identical
+   • Room corners and edges stay in exact positions
+
+📷 PERSPECTIVE LOCK:
+   • Camera position is FIXED - do not move or rotate
+   • Focal length remains unchanged
+   • Vanishing points stay in identical positions
+   • Lens distortion pattern must match original
+   • Eye level remains constant
+
+🏗️ ARCHITECTURAL INTEGRITY:
+   • Windows: Keep exact count, size, shape, and position
+   • Doors: Preserve location, size, and swing direction
+   • Built-in elements: Maintain all fixed architectural features
+   • Ceiling details: Preserve beams, moldings, skylights
+   • Structural columns or supports: Keep exactly as is
+
+💡 LIGHTING COHERENCE:
+   • Natural light sources stay in original positions
+   • Light direction and angle must match the original
+   • Shadow casting must be physically accurate
+   • Time of day feeling should be preserved
+   • No magical light sources appearing from nowhere
+
+═══════════════════════════════════════════════════════════════
+                    TRANSFORMATION SCOPE
+═══════════════════════════════════════════════════════════════
+
+You ARE permitted to redesign:
+
+🎨 SURFACES & FINISHES:
+   • Wall colors, textures, wallpapers, or paint finishes
+   • Floor materials (hardwood, tile, carpet, concrete, etc.)
+   • Ceiling color and texture (within existing structure)
+   • Trim and molding colors
+
+🪑 FURNITURE & LAYOUT:
+   • Replace, add, or remove furniture pieces
+   • Reposition furniture within the floor space
+   • Upgrade furniture style to match ${style} aesthetic
+   • Scale furniture appropriately to room dimensions
+
+🖼️ DÉCOR & STYLING:
+   • Artwork, mirrors, and wall decorations
+   • Plants, vases, and decorative objects
+   • Textiles: rugs, curtains, cushions, throws
+   • Books, candles, and styling accessories
+
+💡 LIGHTING FIXTURES:
+   • Replace existing fixtures with new designs
+   • Add table lamps, floor lamps, or pendant lights
+   • Maintain logical light source positions
+
+═══════════════════════════════════════════════════════════════
+                    STYLE SPECIFICATIONS: ${style.toUpperCase()}
+═══════════════════════════════════════════════════════════════
+
+Apply the ${style} design philosophy authentically:
+• Use characteristic materials and textures of ${style}
+• Apply the color palette typical of ${style} interiors
+• Select furniture silhouettes that define ${style}
+• Include signature decorative elements of ${style}
+• Create the atmosphere and mood associated with ${style}
+
+═══════════════════════════════════════════════════════════════
+                    QUALITY STANDARDS
+═══════════════════════════════════════════════════════════════
+
+PHOTOREALISM REQUIREMENTS:
+• Quality level: Professional architectural photography
+• Resolution feeling: 8K equivalent detail
+• Texture rendering: Visible fabric weaves, wood grain, stone pores
+• Material accuracy: Realistic reflections, refractions, subsurface scattering
+• Edge quality: Clean, natural transitions without artifacts
+
+COMPOSITION EXCELLENCE:
+• Maintain the original photo's compositional strength
+• Ensure visual balance with new design elements
+• Create clear depth layers (foreground, midground, background)
+• Guide the eye through the space naturally
+
+═══════════════════════════════════════════════════════════════
+                    FINAL OUTPUT
+═══════════════════════════════════════════════════════════════
+
+Generate ONE photorealistic image that:
+✓ Preserves the exact room structure from the input
+✓ Transforms the ${roomType} with authentic ${style} design
+✓ Looks indistinguishable from a professional interior photograph
+✓ Would be publishable in Architectural Digest
+
+BEGIN TRANSFORMATION.`;
+}
+
 export async function POST(req: NextRequest) {
   console.log("=== Generate API Called ===");
   
   try {
-    const { prompt, image, analysis, productImages } = await req.json();
+    const { prompt, image, analysis, productImages, enhancedPrompt } = await req.json();
     console.log("Step 1: Request parsed", { hasImage: !!image, productImagesCount: productImages?.length || 0 });
 
-    if (!prompt) {
+    if (!prompt && !enhancedPrompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
     const roomType = analysis?.roomType || "room";
-    const style = analysis?.style || "";
+    const style = analysis?.style || "modern";
+    const userPrompt = enhancedPrompt || prompt;
     
-    // Build a STRICT enhanced prompt that enforces room type
-    let enhancedPrompt = "";
-    if (image) {
-      enhancedPrompt = `IMPORTANT: Generate a ${roomType.toUpperCase()} interior design. 
-      
-Transform this room into a ${roomType} with ${style} style. ${prompt}.
-
-CRITICAL REQUIREMENTS:
-- The final image MUST be a ${roomType} - not any other type of room
-- Include appropriate ${roomType} furniture and fixtures
-- Keep the original perspective and lighting from the reference image
-- Use the product reference images as visual inspiration for furniture style and colors
-- Make it photorealistic, high quality, interior design magazine style
-
-DO NOT mix with other room types. This is ONLY a ${roomType}.`;
-    } else {
-      enhancedPrompt = `Generate a photorealistic ${roomType} interior with ${style} style. ${prompt}. 
-      
-CRITICAL: This must be a ${roomType} only. High quality, 8k, interior design magazine style.`;
-    }
+    // Build the master prompt
+    const masterPrompt = buildMasterPrompt(roomType, style, userPrompt, !!image);
 
     // Build contents array - TEXT FIRST, then images
-    const contents: any[] = [{ text: enhancedPrompt }];
+    const contents: any[] = [{ text: masterPrompt }];
 
     // Add original room image if provided
     if (image) {
@@ -62,9 +196,9 @@ CRITICAL: This must be a ${roomType} only. High quality, 8k, interior design mag
       }
     }
 
-    // Add product reference images (limit to 5 as per doc example)
+    // Add product reference images (limit to 3 for better focus)
     if (productImages && Array.isArray(productImages)) {
-      const limitedImages = productImages.slice(0, 5);
+      const limitedImages = productImages.slice(0, 3);
       console.log(`Generator received ${productImages.length} product images, using ${limitedImages.length}.`);
       
       for (const imgUrl of limitedImages) {

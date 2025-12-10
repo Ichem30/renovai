@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth-provider";
 import { getProject, updateProject, ProjectData } from "@/lib/firestore";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X, Sparkles, Wand2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X, Sparkles, Wand2, Check } from "lucide-react";
 import Link from "next/link";
 import { ChatInterface } from "@/components/project/chat-interface";
 import { v4 as uuidv4 } from "uuid";
@@ -479,31 +479,44 @@ export default function ProjectDetailsPage() {
                   {project.products.map((product: any, i: number) => (
                     <a 
                       key={i}
-                      href={product.productUrl || `https://www.google.com/search?q=${encodeURIComponent(product.searchTerm)}`}
+                      href={product.productUrl || `https://www.google.com/search?q=${encodeURIComponent(product.searchTerm || product.name)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex flex-col gap-4 rounded-2xl border border-white/5 bg-white/5 p-5 transition-all duration-300 hover:border-purple-500/30 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/5"
                     >
                       {/* Product Image */}
-                      {product.imageUrl && (
+                      {(product.storedImageUrl || product.imageUrl) && (
                         <div className="relative h-32 w-full overflow-hidden rounded-xl bg-black/40">
                           <img 
-                            src={product.imageUrl} 
+                            src={product.storedImageUrl || product.imageUrl} 
                             alt={product.name}
                             className="h-full w-full object-cover"
                             onError={(e) => (e.currentTarget.style.display = 'none')}
                           />
+                          {/* Verified Badge */}
+                          {product.verified && (
+                            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-green-500/90 px-2 py-0.5 text-[10px] font-medium text-white">
+                              <Check className="h-3 w-3" /> Vérifié
+                            </div>
+                          )}
                         </div>
                       )}
                       
                       <div className="flex items-start justify-between">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/40 text-2xl border border-white/5">
-                          {product.category === "Sofa" ? "🛋️" : 
-                           product.category === "Lamp" ? "💡" : 
-                           product.category === "Rug" ? "🧶" : "📦"}
+                          {product.category === "Sofa" || product.category === "Canapé" ? "🛋️" : 
+                           product.category === "Lamp" || product.category === "Lampe" ? "💡" : 
+                           product.category === "Rug" || product.category === "Tapis" ? "🧶" :
+                           product.category === "Table" ? "🪑" :
+                           product.category === "Chair" || product.category === "Chaise" ? "💺" : "📦"}
                         </div>
-                        <div className="rounded-full bg-white/5 px-2 py-1 text-[10px] font-medium text-gray-400">
-                          {product.category}
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-gray-400">
+                            {product.category}
+                          </div>
+                          {product.source && (
+                            <span className="text-[9px] text-gray-500">{product.source}</span>
+                          )}
                         </div>
                       </div>
                       
@@ -517,9 +530,18 @@ export default function ProjectDetailsPage() {
                       </div>
                       
                       <div className="mt-auto pt-4 border-t border-white/5">
-                        <div className="flex items-center justify-between text-xs font-medium">
-                          <span className="text-gray-500">{product.productUrl ? "Lien direct" : "Rechercher"}</span>
-                          <span className="flex items-center gap-1 text-purple-400 group-hover:translate-x-1 transition-transform">
+                        <div className="flex items-center justify-between">
+                          {/* Price */}
+                          {product.price ? (
+                            <span className="text-lg font-bold text-white">
+                              {product.price.toLocaleString('fr-FR')} €
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              {product.productUrl ? "Voir le prix" : "Rechercher"}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1 text-xs font-medium text-purple-400 group-hover:translate-x-1 transition-transform">
                             Acheter <ArrowRight className="h-3 w-3" />
                           </span>
                         </div>

@@ -1,7 +1,102 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+// Helper to persist image to Firebase Storage
+async function persistImageToStorage(imageUrl: string, productId: string): Promise<string | null> {
+  try {
+    console.log(`📦 Persisting image: ${imageUrl.substring(0, 50)}...`);
+    
+    const response = await fetch(imageUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    });
+    
+    if (!response.ok) {
+      console.error(`Failed to fetch image: ${response.status}`);
+      return null;
+    }
+    
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Determine file extension
+    let ext = "jpg";
+    if (contentType.includes("png")) ext = "png";
+    if (contentType.includes("webp")) ext = "webp";
+    
+    // Upload to Firebase Storage
+    const fileName = `products/${productId}_${Date.now()}.${ext}`;
+    const storageRef = ref(storage, fileName);
+    
+    await uploadBytes(storageRef, buffer, { contentType });
+    const downloadUrl = await getDownloadURL(storageRef);
+    
+    console.log(`✅ Image persisted: ${fileName}`);
+    return downloadUrl;
+  } catch (e) {
+    console.error("Failed to persist image:", e);
+    return null;
+  }
+}
+
+// Helper to validate a URL is accessible
+async function validateUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { 
+      method: "HEAD",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Helper to extract price from Google CSE data
+function extractPrice(item: any): { price: number | null; currency: string } {
+  // Try product structured data
+  if (item.pagemap?.product?.[0]?.price) {
+    const priceStr = item.pagemap.product[0].price;
+    const match = priceStr.match(/[\d.,]+/);
+    if (match) {
+      return { price: parseFloat(match[0].replace(",", ".")), currency: "EUR" };
+    }
+  }
+  
+  // Try offer price
+  if (item.pagemap?.offer?.[0]?.price) {
+    const priceStr = item.pagemap.offer[0].price;
+    const match = priceStr.match(/[\d.,]+/);
+    if (match) {
+      return { price: parseFloat(match[0].replace(",", ".")), currency: "EUR" };
+    }
+  }
+  
+  // Try metatags
+  if (item.pagemap?.metatags?.[0]?.["product:price:amount"]) {
+    return { 
+      price: parseFloat(item.pagemap.metatags[0]["product:price:amount"]), 
+      currency: item.pagemap.metatags[0]["product:price:currency"] || "EUR" 
+    };
+  }
+  
+  // Try to extract from snippet
+  const snippet = item.snippet || "";
+  const priceMatch = snippet.match(/(\d+[.,]?\d*)\s*€/);
+  if (priceMatch) {
+    return { price: parseFloat(priceMatch[1].replace(",", ".")), currency: "EUR" };
+  }
+  
+  return { price: null, currency: "EUR" };
+}
 
 // Helper to search Google CSE - finds first result WITH an image
 async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<any> {
@@ -15,8 +110,8 @@ async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<a
 
   // Try different search variations
   const searchVariations = [
-    query + " acheter",
-    query + " prix",
+    query + " acheter prix",
+    query + " prix €",
     query // simple search as fallback
   ];
 
@@ -25,7 +120,7 @@ async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<a
     
     try {
       // Request multiple results to find one with an image
-      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(searchQuery)}&num=5&lr=lang_fr&gl=fr`;
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&q=${encodeURIComponent(searchQuery)}&num=10&lr=lang_fr&gl=fr`;
       const response = await fetch(searchUrl);
       
       if (!response.ok) {
@@ -39,7 +134,7 @@ async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<a
         continue;
       }
 
-      // Find first result with an image
+      // Find first result with a valid product image
       for (const item of data.items) {
         let image = null;
         
@@ -65,21 +160,30 @@ async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<a
             lowerImage.endsWith(".svg") ||
             lowerImage.includes("/assets/") ||
             lowerImage.includes("range-categorisation") ||
-            lowerImage.includes("placeholder");
+            lowerImage.includes("placeholder") ||
+            lowerImage.includes("default") ||
+            lowerImage.includes("no-image");
           
           if (!isBadImage) {
-            console.log(`✅ Found product with image: "${item.title}"`);
+            // Extract price
+            const priceData = extractPrice(item);
+            
+            console.log(`✅ Found product: "${item.title}" ${priceData.price ? `- ${priceData.price}€` : "(no price)"}`);
+            
             return {
               title: item.title,
               link: item.link,
               snippet: item.snippet,
-              image: image
+              image: image,
+              price: priceData.price,
+              currency: priceData.currency,
+              source: new URL(item.link).hostname.replace("www.", "")
             };
           }
         }
       }
 
-      console.log(`⚠️ No image found in ${data.items.length} results for "${searchQuery}", trying next variation...`);
+      console.log(`⚠️ No valid product found in ${data.items.length} results for "${searchQuery}"`);
       
     } catch (e) {
       console.error(`Google CSE error for "${searchQuery}":`, e);
@@ -92,7 +196,7 @@ async function searchGoogleCSE(query: string, maxRetries: number = 2): Promise<a
 
 export async function POST(req: NextRequest) {
   try {
-    const { roomType, style, furnitureList, budget } = await req.json();
+    const { roomType, style, furnitureList, budget, persistImages = true } = await req.json();
 
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.0-flash-exp",
@@ -119,34 +223,34 @@ export async function POST(req: NextRequest) {
         
         For EACH item, provide:
         1. "category": The type of item
-        2. "searchTerm": A precise French search query to find this product (e.g., "canapé 3 places lin beige Maison du Monde")
+        2. "searchTerm": A precise French search query to find this product on e-commerce sites (include brand name if relevant)
         3. "visual_description": Detailed visual description for AI image generation
         
         Return a JSON array of objects.
       `;
     } else {
       let categoryFocus = "furniture, lighting, and decor";
-      if (roomType === "kitchen") categoryFocus = "bar stools, lighting, appliances, and decor";
-      if (roomType === "bedroom") categoryFocus = "bed frame, nightstands, lighting, and rugs";
-      if (roomType === "bathroom") categoryFocus = "vanity accessories, mirrors, lighting, and storage";
-      if (roomType === "office") categoryFocus = "desk, office chair, lighting, and organization";
+      if (roomType === "kitchen") categoryFocus = "bar stools, pendant lighting, kitchen accessories, and decor";
+      if (roomType === "bedroom") categoryFocus = "bed frame, nightstands, bedroom lighting, and textiles";
+      if (roomType === "bathroom") categoryFocus = "bathroom accessories, mirrors, lighting, and storage";
+      if (roomType === "office") categoryFocus = "desk, ergonomic chair, desk lamp, and organization";
 
       prompt = `
-        You are an expert interior designer. Suggest 6 product search terms for a "${style}" style "${roomType}".
+        You are an expert interior designer. Suggest 6 specific products for a "${style}" style "${roomType}".
         
         Focus on: ${categoryFocus}.
         ${budgetContext}
         
         For EACH item, provide:
         1. "category": The type of item (e.g., "Sofa", "Lamp", "Rug")
-        2. "searchTerm": A precise French search query (e.g., "fauteuil velours vert La Redoute")
+        2. "searchTerm": A precise French search query with brand name (e.g., "fauteuil velours vert La Redoute", "lampadaire design Maisons du Monde")
         3. "visual_description": Detailed visual description for AI image generation
         
         Return a JSON array of objects.
       `;
     }
 
-    console.log("Generating product categories with Gemini...");
+    console.log("🔍 Generating product categories with Gemini...");
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
@@ -161,48 +265,90 @@ export async function POST(req: NextRequest) {
       throw new Error("Invalid JSON response from AI");
     }
 
-    console.log(`Generated ${productCategories.length} product categories`);
+    console.log(`📋 Generated ${productCategories.length} product categories`);
 
-    // Step 2: Search Google CSE for each product
+    // Step 2: Search Google CSE for each product and enrich
     const hasGoogleCSE = process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_CX;
     
     const products = await Promise.all(
-      productCategories.map(async (cat: any) => {
+      productCategories.map(async (cat: any, index: number) => {
         let googleResult = null;
         
         if (hasGoogleCSE) {
-          console.log(`Searching Google for: "${cat.searchTerm}"`);
+          console.log(`🔎 Searching for: "${cat.searchTerm}"`);
           googleResult = await searchGoogleCSE(cat.searchTerm);
         }
 
         if (googleResult) {
+          // Validate the product URL
+          const isLinkValid = await validateUrl(googleResult.link);
+          
+          // Persist image to Firebase Storage
+          let storedImageUrl = null;
+          if (persistImages && googleResult.image) {
+            const productId = `${cat.category.toLowerCase().replace(/\s+/g, "_")}_${index}`;
+            storedImageUrl = await persistImageToStorage(googleResult.image, productId);
+          }
+          
           return {
-            name: googleResult.title.split(" - ")[0].split(" | ")[0], // Clean title
+            id: `product_${Date.now()}_${index}`,
+            name: googleResult.title.split(" - ")[0].split(" | ")[0].substring(0, 60), // Clean title
             category: cat.category,
-            description: googleResult.snippet,
+            description: googleResult.snippet?.substring(0, 150) || `Produit style ${style}`,
             visual_description: cat.visual_description,
             searchTerm: cat.searchTerm,
-            imageUrl: googleResult.image,
-            productUrl: googleResult.link // Real link!
+            // Images
+            originalImageUrl: googleResult.image,
+            storedImageUrl: storedImageUrl, // Firebase persisted URL
+            imageUrl: storedImageUrl || googleResult.image, // Use stored if available
+            // Link
+            productUrl: googleResult.link,
+            verified: isLinkValid,
+            // Price
+            price: googleResult.price,
+            currency: googleResult.currency || "EUR",
+            // Metadata
+            source: googleResult.source,
+            fetchedAt: new Date().toISOString()
           };
         } else {
           // Fallback if Google CSE not configured or no results
           return {
+            id: `product_${Date.now()}_${index}`,
             name: cat.searchTerm,
             category: cat.category,
             description: `Produit style ${style}`,
             visual_description: cat.visual_description,
             searchTerm: cat.searchTerm,
+            originalImageUrl: null,
+            storedImageUrl: null,
             imageUrl: null,
-            productUrl: null
+            productUrl: null,
+            verified: false,
+            price: null,
+            currency: "EUR",
+            source: null,
+            fetchedAt: new Date().toISOString()
           };
         }
       })
     );
 
-    console.log(`Enriched ${products.filter((p: any) => p.productUrl).length}/${products.length} products with real links`);
+    const enrichedCount = products.filter((p: any) => p.productUrl).length;
+    const verifiedCount = products.filter((p: any) => p.verified).length;
+    const withPriceCount = products.filter((p: any) => p.price).length;
+    
+    console.log(`📊 Results: ${enrichedCount}/${products.length} with links, ${verifiedCount} verified, ${withPriceCount} with prices`);
 
-    return NextResponse.json({ products });
+    return NextResponse.json({ 
+      products,
+      stats: {
+        total: products.length,
+        withLinks: enrichedCount,
+        verified: verifiedCount,
+        withPrices: withPriceCount
+      }
+    });
   } catch (error) {
     console.error("Shopping agent error:", error);
     return NextResponse.json({ error: "Failed to select products", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
