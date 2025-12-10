@@ -4,23 +4,38 @@ import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export async function POST(req: NextRequest) {
+  console.log("=== Generate API Called ===");
+  
   try {
     const { prompt, image, analysis, productImages } = await req.json();
+    console.log("Step 1: Request parsed", { hasImage: !!image, productImagesCount: productImages?.length || 0 });
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // Build the enhanced prompt
+    const roomType = analysis?.roomType || "room";
+    const style = analysis?.style || "";
+    
+    // Build a STRICT enhanced prompt that enforces room type
     let enhancedPrompt = "";
     if (image) {
-      enhancedPrompt = `Transform the provided room image into a ${analysis?.roomType || "room"}. ${prompt}. Keep the original perspective and lighting, but fully adapt the furniture, fixtures, and layout to match the requested room type and style. Ensure the room function is clearly recognizable as a ${analysis?.roomType || "room"}.`;
-    } else {
-      enhancedPrompt = `Generate a photorealistic image of a ${analysis?.roomType || "room"}. ${prompt}. High quality, 8k, interior design magazine style.`;
-    }
+      enhancedPrompt = `IMPORTANT: Generate a ${roomType.toUpperCase()} interior design. 
+      
+Transform this room into a ${roomType} with ${style} style. ${prompt}.
 
-    if (productImages && productImages.length > 0) {
-      enhancedPrompt += " Use the provided product images as specific visual references for the furniture and decor in the scene.";
+CRITICAL REQUIREMENTS:
+- The final image MUST be a ${roomType} - not any other type of room
+- Include appropriate ${roomType} furniture and fixtures
+- Keep the original perspective and lighting from the reference image
+- Use the product reference images as visual inspiration for furniture style and colors
+- Make it photorealistic, high quality, interior design magazine style
+
+DO NOT mix with other room types. This is ONLY a ${roomType}.`;
+    } else {
+      enhancedPrompt = `Generate a photorealistic ${roomType} interior with ${style} style. ${prompt}. 
+      
+CRITICAL: This must be a ${roomType} only. High quality, 8k, interior design magazine style.`;
     }
 
     // Build contents array - TEXT FIRST, then images
@@ -84,7 +99,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log(`Sending ${contents.length} content parts to Gemini...`);
+    console.log(`Step 2: Sending ${contents.length} content parts to Gemini...`);
+    console.log(`Step 3: Calling gemini-3-pro-image-preview...`);
+    
+    const startTime = Date.now();
 
     // Call Gemini 3 Pro Image Preview with correct format
     const response = await ai.models.generateContent({
@@ -98,6 +116,8 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+    
+    console.log(`Step 4: Gemini responded in ${Date.now() - startTime}ms`);
 
     // Extract generated image
     let generatedImageBase64 = null;
