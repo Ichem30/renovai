@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     let enhancedPrompt = "";
     if (image) {
       // Editing Mode: Instruction to modify the provided image
-      enhancedPrompt = `Using the provided image of a ${analysis?.roomType || "room"}, ${prompt}. Maintain the perspective, lighting, and structural elements of the original room.`;
+      enhancedPrompt = `Transform the provided image into a ${analysis?.roomType || "room"}. ${prompt}. Keep the original perspective and lighting, but fully adapt the furniture, fixtures, and layout to match the requested room type and style. Ensure the room function is clearly recognizable as a ${analysis?.roomType || "room"}.`;
     } else {
       // Generation Mode: Create new image
       enhancedPrompt = `Generate a photorealistic image of a ${analysis?.roomType || "room"}. ${prompt}. High quality, 8k, interior design magazine style.`;

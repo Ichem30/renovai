@@ -186,13 +186,12 @@ export default function ProjectDetailsPage() {
 
   return (
     <div className="flex h-screen flex-col bg-black text-white overflow-hidden selection:bg-purple-500/30">
-      <Navbar />
       
-      <div className="flex flex-1 overflow-hidden pt-20">
-        {/* Left Panel - Image Visualization (70%) */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel - Image Visualization */}
         <div className="relative flex flex-1 flex-col bg-black/50 overflow-y-auto">
           {/* Glass Toolbar */}
-          <div className="sticky top-4 z-20 mx-auto w-[95%] max-w-4xl rounded-full border border-white/10 bg-black/60 px-6 py-3 backdrop-blur-xl shadow-2xl flex items-center justify-between">
+          <div className="sticky top-4 z-20 mx-auto w-[95%] max-w-[1600px] rounded-full border border-white/10 bg-black/60 px-6 py-3 backdrop-blur-xl shadow-2xl flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link 
                 href="/dashboard"
@@ -234,8 +233,8 @@ export default function ProjectDetailsPage() {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-shrink-0 p-6 flex flex-col items-center justify-center gap-8 min-h-[600px]">
-            <div className="relative aspect-video w-full max-w-6xl overflow-hidden rounded-2xl border border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] bg-gray-900">
+          <div className="flex-shrink-0 p-4 flex flex-col items-center justify-center gap-6 h-[calc(100vh-100px)]">
+            <div className="relative h-full w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] bg-gray-900/50 group">
               <AnimatePresence>
                 {generating && (
                   <motion.div 
@@ -256,15 +255,15 @@ export default function ProjectDetailsPage() {
                 )}
               </AnimatePresence>
               
-              <div className="relative h-full w-full overflow-hidden">
+              <div className="relative h-full w-full flex items-center justify-center p-4">
                 <img 
                   src={currentAfterImage} 
                   alt="Design actuel" 
-                  className="h-full w-full object-contain"
+                  className="max-h-full max-w-full object-contain shadow-2xl rounded-lg"
                 />
                 
                 {/* Badge indicating version */}
-                <div className="absolute top-6 left-6 flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs font-medium text-white backdrop-blur-xl border border-white/10">
+                <div className="absolute top-6 left-6 flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs font-medium text-white backdrop-blur-xl border border-white/10 shadow-lg">
                   <Sparkles className="h-3 w-3 text-purple-400" />
                   {currentAfterImage === project.originalImageUrl ? "Photo Originale" : "Version Générée par IA"}
                 </div>
@@ -273,12 +272,12 @@ export default function ProjectDetailsPage() {
 
             {/* Gallery / Carousel */}
             {project.generations && project.generations.length > 0 && (
-              <div className="w-full max-w-6xl overflow-x-auto pb-4 scrollbar-hide">
-                <div className="flex gap-4 px-2">
+              <div className="w-full max-w-[1600px] overflow-x-auto pb-4 scrollbar-hide">
+                <div className="flex gap-4 px-2 justify-center">
                   {/* Original */}
                   <button
                     onClick={() => setActiveImage(project.originalImageUrl)}
-                    className={`relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                    className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
                       activeImage === project.originalImageUrl 
                         ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
                         : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
@@ -286,7 +285,7 @@ export default function ProjectDetailsPage() {
                   >
                     <img src={project.originalImageUrl} alt="Original" className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                    <span className="absolute bottom-2 left-2 text-[10px] font-medium text-white">Original</span>
+                    <span className="absolute bottom-1 left-2 text-[10px] font-medium text-white">Original</span>
                   </button>
 
                   {/* Generations */}
@@ -294,7 +293,7 @@ export default function ProjectDetailsPage() {
                     <div key={gen.id} className="relative group">
                       <button
                         onClick={() => setActiveImage(gen.imageUrl)}
-                        className={`relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
+                        className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
                           activeImage === gen.imageUrl 
                             ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
                             : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
@@ -302,11 +301,11 @@ export default function ProjectDetailsPage() {
                       >
                         <img src={gen.imageUrl} alt={`Version ${idx + 1}`} className="h-full w-full object-cover" />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        <span className="absolute bottom-2 left-2 text-[10px] font-medium text-white">Version {idx + 1}</span>
+                        <span className="absolute bottom-1 left-2 text-[10px] font-medium text-white">V{idx + 1}</span>
                       </button>
                       <button
                         onClick={(e) => handleDeleteImage(e, gen.id)}
-                        className="absolute -top-2 -right-2 z-10 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 group-hover:flex"
+                        className="absolute -top-2 -right-2 z-10 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 group-hover:flex"
                         title="Supprimer"
                       >
                         <X className="h-3 w-3" />
@@ -319,8 +318,8 @@ export default function ProjectDetailsPage() {
           </div>
         </div>
 
-        {/* Right Panel - AI Assistant (30%) */}
-        <div className="w-[400px] flex-shrink-0 bg-black/80 border-l border-white/10 backdrop-blur-xl">
+        {/* Right Panel - AI Assistant */}
+        <div className="w-[380px] flex-shrink-0 bg-[#050505] border-l border-white/5 flex flex-col shadow-2xl z-30">
           <ChatInterface 
             projectId={project.id!} 
             initialAnalysis={project.analysis}

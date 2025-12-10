@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, X, Check, ArrowRight, Loader2, Sparkles, Home, Utensils, Bath, Bed, Sofa, Monitor } from "lucide-react";
+import { Upload, X, Check, ArrowRight, Loader2, Sparkles, Home, Utensils, Bath, Bed, Sofa, Monitor, Trees, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth-provider";
@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 
 // --- Types ---
 type WizardData = {
+  projectType: "interior" | "exterior";
   image: File | null;
   imageUrl?: string;
   roomType: string;
@@ -27,6 +28,14 @@ const ROOM_TYPES = [
   { id: "bedroom", label: "Chambre", icon: Bed },
   { id: "bathroom", label: "Salle de bain", icon: Bath },
   { id: "office", label: "Bureau", icon: Monitor },
+  { id: "other", label: "Autre", icon: Home },
+];
+
+const EXTERIOR_TYPES = [
+  { id: "facade", label: "Façade", icon: Building },
+  { id: "garden", label: "Jardin", icon: Trees },
+  { id: "terrace", label: "Terrasse", icon: Home },
+  { id: "pool", label: "Piscine", icon: Sparkles },
   { id: "other", label: "Autre", icon: Home },
 ];
 
@@ -58,6 +67,7 @@ const STYLES = [
 export function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({
+    projectType: "interior",
     image: null,
     roomType: "",
     style: "",
@@ -67,7 +77,7 @@ export function OnboardingWizard() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 6));
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, 7));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const updateData = (key: keyof WizardData, value: any) => {
@@ -81,21 +91,22 @@ export function OnboardingWizard() {
 
       {/* Progress Bar */}
       <div className="relative z-10 mb-12 flex w-full max-w-lg items-center justify-between text-xs font-medium text-gray-400">
-        <span className="font-outfit tracking-wider uppercase">Étape {step} / 6</span>
+        <span className="font-outfit tracking-wider uppercase">Étape {step} / 7</span>
         <div className="h-1.5 flex-1 mx-6 overflow-hidden rounded-full bg-white/5 border border-white/5">
           <motion.div 
             className="h-full bg-gradient-to-r from-purple-500 to-pink-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
             initial={{ width: "0%" }}
-            animate={{ width: `${(step / 6) * 100}%` }}
+            animate={{ width: `${(step / 7) * 100}%` }}
             transition={{ duration: 0.5, ease: "circOut" }}
           />
         </div>
         <span className="font-outfit tracking-wider uppercase text-white">{
-          step === 1 ? "Photo" :
-          step === 2 ? "Vérification" :
-          step === 3 ? "Pièce" :
-          step === 4 ? "Style" :
-          step === 5 ? "Budget" : "Création"
+          step === 1 ? "Type" :
+          step === 2 ? "Photo" :
+          step === 3 ? "Vérification" :
+          step === 4 ? "Pièce" :
+          step === 5 ? "Style" :
+          step === 6 ? "Budget" : "Création"
         }</span>
       </div>
 
@@ -103,52 +114,64 @@ export function OnboardingWizard() {
       <div className="relative z-10 w-full flex-1">
         <AnimatePresence mode="wait">
           {step === 1 && (
+            <StepTypeSelection 
+              key="step1"
+              selected={data.projectType}
+              onSelect={(type) => {
+                updateData("projectType", type);
+                nextStep();
+              }}
+            />
+          )}
+          {step === 2 && (
             <StepUpload 
-              key="step1" 
+              key="step2" 
               onNext={(file) => {
                 updateData("image", file);
                 nextStep();
               }} 
+              onBack={prevStep}
             />
           )}
-          {step === 2 && data.image && (
+          {step === 3 && data.image && (
             <StepVerify 
-              key="step2" 
+              key="step3" 
               image={data.image} 
               onBack={prevStep}
               onNext={nextStep}
             />
           )}
-          {step === 3 && (
+          {step === 4 && (
             <StepRoom 
-              key="step3" 
+              key="step4" 
+              projectType={data.projectType}
               selected={data.roomType}
               onSelect={(room) => updateData("roomType", room)}
               onBack={prevStep}
               onNext={nextStep}
             />
           )}
-          {step === 4 && (
+          {step === 5 && (
             <StepStyle 
-              key="step4" 
+              key="step5" 
               selected={data.style}
               onSelect={(style) => updateData("style", style)}
               onBack={prevStep}
               onNext={nextStep}
             />
           )}
-          {step === 5 && (
+          {step === 6 && (
             <StepBudget 
-              key="step5" 
+              key="step6" 
               selected={data.budget}
               onSelect={(budget) => updateData("budget", budget)}
               onBack={prevStep}
               onNext={nextStep}
             />
           )}
-          {step === 6 && (
+          {step === 7 && (
             <StepAnalysis 
-              key="step6" 
+              key="step7" 
               data={data}
               user={user}
               onComplete={(projectId) => {
@@ -162,8 +185,53 @@ export function OnboardingWizard() {
   );
 }
 
-// --- Step 1: Upload ---
-function StepUpload({ onNext }: { onNext: (file: File) => void }) {
+// --- Step 1: Type Selection ---
+function StepTypeSelection({ selected, onSelect }: { selected: string, onSelect: (type: "interior" | "exterior") => void }) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="flex flex-col items-center text-center"
+    >
+      <h2 className="mb-3 font-outfit text-4xl font-bold text-white">Que souhaitez-vous transformer ?</h2>
+      <p className="mb-12 max-w-lg text-lg text-gray-400">
+        Choisissez le type d'espace pour que notre IA adapte son expertise.
+      </p>
+
+      <div className="grid w-full max-w-2xl grid-cols-2 gap-8">
+        <button
+          onClick={() => onSelect("interior")}
+          className="group relative flex aspect-square flex-col items-center justify-center gap-6 rounded-[2.5rem] border border-white/10 bg-black/40 p-8 transition-all duration-500 hover:border-purple-500 hover:bg-purple-500/10 hover:scale-105"
+        >
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/5 text-purple-400 shadow-lg shadow-purple-500/10 transition-all duration-500 group-hover:bg-purple-500 group-hover:text-white group-hover:shadow-purple-500/40">
+            <Sofa className="h-10 w-10" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-outfit text-2xl font-bold text-white group-hover:text-purple-300 transition-colors">Intérieur</h3>
+            <p className="text-sm text-gray-400 group-hover:text-gray-300">Salon, Cuisine, Chambre...</p>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onSelect("exterior")}
+          className="group relative flex aspect-square flex-col items-center justify-center gap-6 rounded-[2.5rem] border border-white/10 bg-black/40 p-8 transition-all duration-500 hover:border-pink-500 hover:bg-pink-500/10 hover:scale-105"
+        >
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/5 text-pink-400 shadow-lg shadow-pink-500/10 transition-all duration-500 group-hover:bg-pink-500 group-hover:text-white group-hover:shadow-pink-500/40">
+            <Trees className="h-10 w-10" />
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-outfit text-2xl font-bold text-white group-hover:text-pink-300 transition-colors">Extérieur</h3>
+            <p className="text-sm text-gray-400 group-hover:text-gray-300">Façade, Jardin, Terrasse...</p>
+          </div>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// --- Step 2: Upload ---
+function StepUpload({ onNext, onBack }: { onNext: (file: File) => void, onBack: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -185,9 +253,9 @@ function StepUpload({ onNext }: { onNext: (file: File) => void }) {
       <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 border border-white/10 shadow-xl">
         <Home className="h-10 w-10 text-purple-400" />
       </div>
-      <h2 className="mb-3 font-outfit text-4xl font-bold text-white">Commencez par votre pièce</h2>
+      <h2 className="mb-3 font-outfit text-4xl font-bold text-white">Votre espace actuel</h2>
       <p className="mb-10 max-w-lg text-lg text-gray-400">
-        Importez une photo de votre intérieur. Notre IA l'analysera pour comprendre l'espace et la lumière.
+        Importez une photo. Notre IA l'analysera pour comprendre l'espace et la lumière.
       </p>
 
       <div 
@@ -228,11 +296,15 @@ function StepUpload({ onNext }: { onNext: (file: File) => void }) {
           </div>
         </div>
       </div>
+      
+      <Button variant="ghost" onClick={onBack} className="mt-8 text-gray-400 hover:text-white rounded-full px-6">
+        Retour
+      </Button>
     </motion.div>
   );
 }
 
-// --- Step 2: Verify ---
+// --- Step 3: Verify ---
 function StepVerify({ image, onBack, onNext }: { image: File, onBack: () => void, onNext: () => void }) {
   const [preview, setPreview] = useState<string>("");
 
@@ -299,10 +371,11 @@ function StepVerify({ image, onBack, onNext }: { image: File, onBack: () => void
   );
 }
 
-// --- Step 3: Room Selection ---
-function StepRoom({ selected, onSelect, onBack, onNext }: { selected: string, onSelect: (id: string) => void, onBack: () => void, onNext: () => void }) {
+// --- Step 4: Room Selection ---
+function StepRoom({ projectType, selected, onSelect, onBack, onNext }: { projectType: "interior" | "exterior", selected: string, onSelect: (id: string) => void, onBack: () => void, onNext: () => void }) {
   const [customRoom, setCustomRoom] = useState("");
-  const isCustom = !ROOM_TYPES.some(r => r.id === selected) && selected !== "";
+  const currentTypes = projectType === "interior" ? ROOM_TYPES : EXTERIOR_TYPES;
+  const isCustom = !currentTypes.some(r => r.id === selected) && selected !== "";
   const effectiveSelection = isCustom ? "other" : selected;
 
   const handleSelect = (id: string) => {
@@ -326,11 +399,11 @@ function StepRoom({ selected, onSelect, onBack, onNext }: { selected: string, on
       exit={{ opacity: 0, x: -20 }}
       className="flex flex-col items-center"
     >
-      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Quelle pièce souhaitez-vous relooker ?</h2>
-      <p className="mb-12 text-gray-400">Nous adaptons nos recommandations selon le type de pièce.</p>
+      <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Quel espace souhaitez-vous relooker ?</h2>
+      <p className="mb-12 text-gray-400">Nous adaptons nos recommandations selon le type d'espace.</p>
 
       <div className="grid w-full max-w-4xl grid-cols-3 gap-6">
-        {ROOM_TYPES.map((room) => (
+        {currentTypes.map((room) => (
           <button
             key={room.id}
             onClick={() => handleSelect(room.id)}
@@ -364,13 +437,13 @@ function StepRoom({ selected, onSelect, onBack, onNext }: { selected: string, on
             className="mt-8 w-full max-w-md"
           >
             <label className="mb-3 block text-sm font-medium text-gray-400 ml-1">
-              Précisez la pièce :
+              Précisez l'espace :
             </label>
             <input
               type="text"
               value={customRoom || (isCustom ? selected : "")}
               onChange={handleCustomChange}
-              placeholder="Ex: Véranda, Salle de jeux..."
+              placeholder={projectType === "interior" ? "Ex: Véranda, Salle de jeux..." : "Ex: Allée de jardin, Balcon..."}
               className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-4 text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all"
               autoFocus
             />
@@ -406,30 +479,27 @@ function StepStyle({ selected, onSelect, onBack, onNext }: { selected: string, o
       <h2 className="mb-3 font-outfit text-3xl font-bold text-white">Quel style vous inspire ?</h2>
       <p className="mb-12 text-gray-400">Choisissez l'univers qui correspond à votre vision.</p>
 
-      <div className="flex w-full gap-6 overflow-x-auto pb-8 pt-4 px-4 scrollbar-hide snap-x">
+      <div className="grid w-full grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3 lg:grid-cols-4 max-h-[500px] custom-scrollbar">
         {STYLES.map((style) => (
           <button
             key={style.id}
             onClick={() => onSelect(style.id)}
             className={cn(
-              "group relative h-96 w-72 flex-shrink-0 overflow-hidden rounded-[2rem] border transition-all duration-500 snap-center",
+              "group relative aspect-[3/4] w-full overflow-hidden rounded-2xl border transition-all duration-300",
               selected === style.id 
-                ? "border-purple-500 shadow-[0_0_40px_-10px_rgba(168,85,247,0.4)] scale-105 z-10" 
-                : "border-transparent opacity-60 hover:opacity-100 hover:scale-105 hover:z-10"
+                ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-[1.02] z-10" 
+                : "border-white/10 opacity-70 hover:opacity-100 hover:scale-[1.02] hover:z-10"
             )}
           >
             <img src={style.image} alt={style.label} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
             
-            <div className="absolute bottom-0 left-0 right-0 p-8 text-left transform transition-transform duration-500 group-hover:-translate-y-2">
-              <h3 className="font-outfit text-2xl font-bold text-white mb-2">{style.label}</h3>
-              <p className="text-sm text-gray-300 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                {style.description}
-              </p>
+            <div className="absolute bottom-0 left-0 right-0 p-4 text-left">
+              <h3 className="font-outfit text-lg font-bold text-white leading-tight">{style.label}</h3>
               
               {selected === style.id && (
-                <div className="mt-4 flex items-center gap-2 text-purple-400 text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
-                  <Check className="h-4 w-4" /> Sélectionné
+                <div className="mt-2 flex items-center gap-1.5 text-purple-400 text-xs font-medium animate-in fade-in slide-in-from-bottom-1">
+                  <Check className="h-3 w-3" /> Sélectionné
                 </div>
               )}
             </div>

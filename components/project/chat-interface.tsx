@@ -20,11 +20,26 @@ interface ChatInterfaceProps {
 }
 
 const THEMES = [
-  { id: "modern", label: "Moderne", prompt: "Style moderne, épuré, lignes simples, couleurs neutres" },
-  { id: "industrial", label: "Industriel", prompt: "Style industriel, briques apparentes, métal noir, bois brut" },
-  { id: "scandinavian", label: "Scandinave", prompt: "Style scandinave, bois clair, couleurs pastel, cosy, lumineux" },
-  { id: "bohemian", label: "Bohème", prompt: "Style bohème, plantes, textures naturelles, couleurs chaudes, éclectique" },
   { id: "japandi", label: "Japandi", prompt: "Style Japandi, mélange japonais et scandinave, minimaliste, zen, bois et pierre" },
+  { id: "haussmanien", label: "Haussmannien", prompt: "Style Haussmannien, moulures, parquet point de hongrie, cheminée marbre, élégant" },
+  { id: "vintage", label: "Vintage", prompt: "Style Vintage, rétro, mobilier chiné, années 70, couleurs chaudes, nostalgique" },
+  { id: "mid_century_modern", label: "Mid-Century", prompt: "Style Mid-Century Modern, années 50, bois teck, lignes organiques, pieds compas" },
+  { id: "scandinavian", label: "Scandinave", prompt: "Style scandinave, bois clair, couleurs pastel, cosy, lumineux, hygge" },
+  { id: "minimalist", label: "Minimaliste", prompt: "Style minimaliste, épuré, essentiel, monochrome, calme, peu de meubles" },
+  { id: "industrial", label: "Industriel", prompt: "Style industriel, loft, briques apparentes, métal noir, béton, bois brut" },
+  { id: "bohemian", label: "Bohème", prompt: "Style bohème, plantes, macramé, textures naturelles, ethnique, décontracté" },
+  { id: "art_deco", label: "Art Déco", prompt: "Style Art Déco, géométrique, laiton, velours, motifs graphiques, luxe, années 20" },
+  { id: "farmhouse", label: "Farmhouse", prompt: "Style Farmhouse, campagne chic, bois rustique, blanc, poutres apparentes, chaleureux" },
+  { id: "baroque", label: "Baroque", prompt: "Style Baroque, classique, riche, ornements, doré, lustres, théâtral" },
+  { id: "contemporary", label: "Contemporain", prompt: "Style contemporain, design actuel, audacieux, lignes nettes, sophistiqué" },
+  { id: "wabisabi", label: "Wabi-Sabi", prompt: "Style Wabi-Sabi, beauté de l'imperfection, matériaux bruts, terreux, artisanal" },
+  { id: "mediterranean", label: "Méditerranéen", prompt: "Style méditerranéen, sud, terre cuite, murs à la chaux, bleu azur, olivier" },
+  { id: "colonial", label: "Colonial", prompt: "Style colonial, exotique, bois sombre, rotin, lin, voyage, plantes tropicales" },
+  { id: "shabby_chic", label: "Shabby Chic", prompt: "Style Shabby Chic, romantique, patiné, floral, blanc cassé, douceur" },
+  { id: "maximalist", label: "Maximaliste", prompt: "Style maximaliste, audacieux, mélange de motifs, couleurs vives, collectionneur" },
+  { id: "cottagecore", label: "Cottagecore", prompt: "Style Cottagecore, champêtre, floral, nostalgique, nature, doux" },
+  { id: "modern_glam", label: "Modern Glam", prompt: "Style Modern Glam, chic, brillant, miroir, velours, sophistiqué, féminin" },
+  { id: "brutalist", label: "Brutalist", prompt: "Style Brutalist, béton brut, formes géométriques massives, architectural, gris" },
 ];
 
 export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: ChatInterfaceProps) {
@@ -111,7 +126,7 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -135,7 +150,7 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
 
       {/* Quick Actions (Themes) */}
       <div className="border-t border-white/10 p-2">
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
           {THEMES.map((theme) => (
             <button
               key={theme.id}
