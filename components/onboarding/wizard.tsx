@@ -62,6 +62,21 @@ const STYLES = [
   { id: "brutalist", label: "Brutalist", description: "Béton, formes, architectural", image: "https://images.unsplash.com/photo-1560185007-cde436f6a4d0?auto=format&fit=crop&w=800&q=80" },
 ];
 
+const EXTERIOR_STYLES = [
+  { id: "modern_exterior", label: "Moderne", description: "Lignes épurées, béton, verre", image: "https://images.unsplash.com/photo-1600596542815-6ad4c7213aa5?auto=format&fit=crop&w=800&q=80" },
+  { id: "traditional", label: "Traditionnel", description: "Classique, intemporel, brique", image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" },
+  { id: "mediterranean", label: "Méditerranéen", description: "Terre cuite, chaleureux, sud", image: "https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&w=800&q=80" },
+  { id: "christmas", label: "Décoration de Noël", description: "Féerique, lumières, hivernal", image: "https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&w=800&q=80" },
+  { id: "halloween", label: "Halloween", description: "Automnal, citrouilles, mystérieux", image: "https://images.unsplash.com/photo-1508361001413-7a9dca21d08a?auto=format&fit=crop&w=800&q=80" },
+  { id: "zen_garden", label: "Jardin Zen", description: "Japonais, minéral, apaisant", image: "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?auto=format&fit=crop&w=800&q=80" },
+  { id: "cottage", label: "Cottage", description: "Charme, fleurs, bois", image: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=800&q=80" },
+  { id: "industrial_exterior", label: "Industriel", description: "Métal, brut, contemporain", image: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&w=800&q=80" },
+  { id: "tropical", label: "Tropical", description: "Exotique, palmiers, vacances", image: "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?auto=format&fit=crop&w=800&q=80" },
+  { id: "scandinavian_exterior", label: "Scandinave", description: "Bois, nature, simple", image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80" },
+  { id: "provencal", label: "Provençal", description: "Pierre, lavande, rustique chic", image: "https://images.unsplash.com/photo-1599809275671-b5942cabc7ad?auto=format&fit=crop&w=800&q=80" },
+  { id: "minimalist_exterior", label: "Minimaliste", description: "Monochrome, cubique, net", image: "https://images.unsplash.com/photo-1527030280862-64139fba04ca?auto=format&fit=crop&w=800&q=80" },
+];
+
 // --- Components ---
 
 export function OnboardingWizard() {
@@ -154,6 +169,8 @@ export function OnboardingWizard() {
           {step === 5 && (
             <StepStyle 
               key="step5" 
+              projectType={data.projectType}
+              roomType={data.roomType}
               selected={data.style}
               onSelect={(style) => updateData("style", style)}
               onBack={prevStep}
@@ -467,8 +484,10 @@ function StepRoom({ projectType, selected, onSelect, onBack, onNext }: { project
   );
 }
 
-// --- Step 4: Style Selection ---
-function StepStyle({ selected, onSelect, onBack, onNext }: { selected: string, onSelect: (id: string) => void, onBack: () => void, onNext: () => void }) {
+// --- Step 5: Style Selection ---
+function StepStyle({ projectType, roomType, selected, onSelect, onBack, onNext }: { projectType: "interior" | "exterior", roomType: string, selected: string, onSelect: (id: string) => void, onBack: () => void, onNext: () => void }) {
+  const currentStyles = projectType === "exterior" ? EXTERIOR_STYLES : STYLES;
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
@@ -480,7 +499,7 @@ function StepStyle({ selected, onSelect, onBack, onNext }: { selected: string, o
       <p className="mb-12 text-gray-400">Choisissez l'univers qui correspond à votre vision.</p>
 
       <div className="grid w-full grid-cols-2 gap-4 overflow-y-auto pr-2 md:grid-cols-3 lg:grid-cols-4 max-h-[500px] custom-scrollbar">
-        {STYLES.map((style) => (
+        {currentStyles.map((style) => (
           <button
             key={style.id}
             onClick={() => onSelect(style.id)}
@@ -706,8 +725,21 @@ function StepAnalysis({ data, user, onComplete }: { data: WizardData, user: any,
         let generatedImageUrl = null;
         try {
             let productContext = "";
+            let productImages: string[] = [];
+
             if (selectedProducts.length > 0) {
-              productContext = "Featuring these specific items: " + selectedProducts.map((p: any) => `${p.name} (${p.description})`).join(", ") + ".";
+              // Use the detailed visual_description for better realism
+              productContext = "Featuring these specific real-world items: " + selectedProducts.map((p: any) => {
+                const desc = p.visual_description || p.description || p.name;
+                return `${p.name} (${desc})`;
+              }).join(", ") + ".";
+
+              // Collect product images
+              productImages = selectedProducts
+                .map((p: any) => p.imageUrl)
+                .filter((url: string) => url && url.startsWith("http"));
+              
+              console.log(`Wizard collected ${productImages.length} product images for generation.`);
             }
 
             const prompt = `Rénovation complète en style ${data.style}. Pièce: ${data.roomType}. ${productContext} Lumineux, moderne, photoréaliste.`;
@@ -718,7 +750,8 @@ function StepAnalysis({ data, user, onComplete }: { data: WizardData, user: any,
                 body: JSON.stringify({ 
                     prompt,
                     image: imageUrl,
-                    analysis: { roomType: data.roomType } 
+                    analysis: { roomType: data.roomType },
+                    productImages // Pass the images to the generator
                 }),
             });
 

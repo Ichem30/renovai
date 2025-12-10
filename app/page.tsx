@@ -1,18 +1,25 @@
 import { Navbar } from "@/components/landing/navbar";
 import { Hero } from "@/components/landing/hero";
+import { HowItWorks } from "@/components/landing/how-it-works";
 import { Features } from "@/components/landing/features";
+import { Pricing } from "@/components/landing/pricing";
+import { Testimonials } from "@/components/landing/testimonials";
+import { FAQ } from "@/components/landing/faq";
+import { FinalCTA } from "@/components/landing/final-cta";
+import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white">
       <Navbar />
       <Hero />
+      <HowItWorks />
       <Features />
-      
-      {/* Footer simple */}
-      <footer className="border-t border-white/10 py-8 text-center text-gray-500">
-        <p>© 2025 RenovAI. Tous droits réservés.</p>
-      </footer>
+      <Testimonials />
+      <Pricing />
+      <FAQ />
+      <FinalCTA />
+      <Footer />
     </main>
   );
 }

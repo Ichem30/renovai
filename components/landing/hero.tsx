@@ -43,11 +43,6 @@ export function Hero() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/#demo">
-              <Button variant="ghost" size="lg" className="h-14 rounded-full px-8 text-lg text-gray-400 hover:text-white hover:bg-white/5">
-                Voir la démo
-              </Button>
-            </Link>
           </div>
         </motion.div>
 

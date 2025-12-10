@@ -17,7 +17,12 @@ export interface ProjectData {
   analysis?: any; // Now optional as it's fetched async
   costEstimate?: string; // Now optional
   createdAt?: any;
+  completedAt?: any;
   products?: any[]; // Shopping list items
+  status?: "pending" | "generating" | "completed" | "error"; // Generation status
+  error?: string; // Error message if failed
+  style?: string;
+  roomType?: string;
 }
 
 export async function saveProject(data: ProjectData) {

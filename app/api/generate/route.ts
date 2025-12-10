@@ -1,76 +1,123 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, image, analysis } = await req.json();
+    const { prompt, image, analysis, productImages } = await req.json();
 
     if (!prompt) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // Use Gemini 2.0 Flash Exp (supports Imagen 3)
-    // The user's key is valid for this model (verified via chat), but not for gemini-3-pro-image-preview
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-image-preview" });
-
-    let contents: any[] = [];
-    
-    // Add the text prompt
+    // Build the enhanced prompt
     let enhancedPrompt = "";
     if (image) {
-      // Editing Mode: Instruction to modify the provided image
-      enhancedPrompt = `Transform the provided image into a ${analysis?.roomType || "room"}. ${prompt}. Keep the original perspective and lighting, but fully adapt the furniture, fixtures, and layout to match the requested room type and style. Ensure the room function is clearly recognizable as a ${analysis?.roomType || "room"}.`;
+      enhancedPrompt = `Transform the provided room image into a ${analysis?.roomType || "room"}. ${prompt}. Keep the original perspective and lighting, but fully adapt the furniture, fixtures, and layout to match the requested room type and style. Ensure the room function is clearly recognizable as a ${analysis?.roomType || "room"}.`;
     } else {
-      // Generation Mode: Create new image
       enhancedPrompt = `Generate a photorealistic image of a ${analysis?.roomType || "room"}. ${prompt}. High quality, 8k, interior design magazine style.`;
     }
-    
-    // If we have an original image, fetch it and add it for img2img
+
+    if (productImages && productImages.length > 0) {
+      enhancedPrompt += " Use the provided product images as specific visual references for the furniture and decor in the scene.";
+    }
+
+    // Build contents array - TEXT FIRST, then images
+    const contents: any[] = [{ text: enhancedPrompt }];
+
+    // Add original room image if provided
     if (image) {
       try {
         const imageResp = await fetch(image);
-        const arrayBuffer = await imageResp.arrayBuffer();
-        const base64Image = Buffer.from(arrayBuffer).toString("base64");
-        const mimeType = imageResp.headers.get("content-type") || "image/jpeg";
+        if (imageResp.ok) {
+          const arrayBuffer = await imageResp.arrayBuffer();
+          const base64Image = Buffer.from(arrayBuffer).toString("base64");
+          const mimeType = imageResp.headers.get("content-type") || "image/jpeg";
 
-        contents.push({
-          inlineData: {
-            data: base64Image,
-            mimeType: mimeType
-          }
-        });
+          contents.push({
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Image,
+            },
+          });
+        }
       } catch (e) {
         console.error("Failed to fetch original image:", e);
-        // Continue without image if fetch fails
       }
     }
 
-    // Add prompt after image (best practice for some models, but order in array matters less than content)
-    contents.push({ text: enhancedPrompt });
+    // Add product reference images (limit to 5 as per doc example)
+    if (productImages && Array.isArray(productImages)) {
+      const limitedImages = productImages.slice(0, 5);
+      console.log(`Generator received ${productImages.length} product images, using ${limitedImages.length}.`);
+      
+      for (const imgUrl of limitedImages) {
+        if (!imgUrl) continue;
+        try {
+          console.log(`Fetching product image: ${imgUrl}`);
+          const imgResp = await fetch(imgUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+          });
+          
+          if (!imgResp.ok) {
+            console.error(`Failed to fetch product image ${imgUrl}: ${imgResp.status}`);
+            continue;
+          }
+          
+          const arrayBuffer = await imgResp.arrayBuffer();
+          const base64Image = Buffer.from(arrayBuffer).toString("base64");
+          const mimeType = imgResp.headers.get("content-type") || "image/jpeg";
 
-    // Generate content
-    const result = await model.generateContent(contents);
-    const response = await result.response;
-    
-    // Check for inline image data in the response
+          contents.push({
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Image,
+            },
+          });
+          console.log(`Successfully added product image: ${imgUrl}`);
+        } catch (e) {
+          console.error("Failed to fetch product image:", imgUrl, e);
+        }
+      }
+    }
+
+    console.log(`Sending ${contents.length} content parts to Gemini...`);
+
+    // Call Gemini 3 Pro Image Preview with correct format
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-image-preview",
+      contents: contents,
+      config: {
+        responseModalities: ["TEXT", "IMAGE"],
+        imageConfig: {
+          aspectRatio: "16:9",
+          imageSize: "2K",
+        },
+      },
+    });
+
+    // Extract generated image
     let generatedImageBase64 = null;
-    
-    if (response.candidates && response.candidates[0].content && response.candidates[0].content.parts) {
+
+    if (response.candidates && response.candidates[0]?.content?.parts) {
       for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          generatedImageBase64 = part.inlineData.data;
+        if ((part as any).inlineData) {
+          generatedImageBase64 = (part as any).inlineData.data;
           break;
         }
       }
     }
 
     if (!generatedImageBase64) {
-      console.error("No image generated. Response text:", response.text());
+      // Try to get text response for debugging
+      const textPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text);
+      console.error("No image generated. Response:", textPart?.text || "No text either");
       return NextResponse.json({ error: "Failed to generate image" }, { status: 500 });
     }
-    
+
     return NextResponse.json({ imageBase64: generatedImageBase64 });
 
   } catch (error) {

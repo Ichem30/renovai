@@ -51,25 +51,34 @@ export default function ProjectDetailsPage() {
     }
 
     if (user && params.id) {
-      const fetchProject = async () => {
-        try {
-          const data = await getProject(params.id as string);
+      // Import onSnapshot for real-time updates
+      import("firebase/firestore").then(({ onSnapshot, doc }) => {
+        import("@/lib/firebase").then(({ db }) => {
+          const docRef = doc(db, "projects", params.id as string);
           
-          if (data && data.userId === user.uid) {
-            setProject(data);
-            if (!data.analysis) {
-              performAutoAnalysis(data);
+          // Set up real-time listener
+          const unsubscribe = onSnapshot(docRef, async (docSnap) => {
+            if (docSnap.exists()) {
+              const data = { id: docSnap.id, ...docSnap.data() } as ProjectData;
+              
+              if (data.userId === user.uid) {
+                setProject(data);
+                setLoading(false);
+                
+                // Auto-analyze if needed and completed
+                if (data.status === "completed" && !data.analysis) {
+                  performAutoAnalysis(data);
+                }
+              }
+            } else {
+              setLoading(false);
             }
-          } else {
-            // Handle unauthorized or not found
-          }
-        } catch (err) {
-          console.error("Error in fetchProject:", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchProject();
+          });
+          
+          // Cleanup listener on unmount
+          return () => unsubscribe();
+        });
+      });
     }
   }, [user, authLoading, params.id, router]);
 
@@ -178,6 +187,108 @@ export default function ProjectDetailsPage() {
             <Button variant="outline" className="mt-4">Retour au Dashboard</Button>
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  // Show loading UI for pending/generating projects
+  if (project.status === "pending" || project.status === "generating") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md"
+        >
+          <div className="relative mb-8">
+            <div className="h-24 w-24 mx-auto rounded-full bg-gradient-to-r from-purple-600 to-pink-600 animate-pulse" />
+            <Loader2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-12 w-12 animate-spin text-white" />
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-4">
+            {project.status === "pending" ? "Préparation en cours..." : "Génération en cours..."}
+          </h2>
+          
+          <p className="text-gray-400 mb-8">
+            {project.status === "pending" 
+              ? "Votre projet est en file d'attente. La génération va démarrer sous peu."
+              : "Notre IA crée votre design personnalisé. Vous pouvez fermer cette page, la génération continuera en arrière-plan."}
+          </p>
+          
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-center gap-2 text-sm text-purple-400">
+              <Sparkles className="h-4 w-4" />
+              <span>Recherche des produits...</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Wand2 className="h-4 w-4" />
+              <span>Création de l'image...</span>
+            </div>
+          </div>
+          
+          <Link href="/dashboard" className="mt-12 inline-block">
+            <Button variant="outline" className="border-white/10 hover:bg-white/10">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour au Dashboard
+            </Button>
+          </Link>
+          
+          <p className="mt-4 text-xs text-gray-500">
+            Vous serez notifié quand votre projet sera prêt
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show error UI if generation failed
+  if (project.status === "error") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-black text-white">
+        <div className="text-center max-w-md">
+          <div className="h-24 w-24 mx-auto mb-8 rounded-full bg-red-500/20 flex items-center justify-center">
+            <X className="h-12 w-12 text-red-500" />
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-4 text-red-400">Erreur de génération</h2>
+          
+          <p className="text-gray-400 mb-4">
+            Une erreur s'est produite lors de la génération de votre projet.
+          </p>
+          
+          {project.error && (
+            <p className="text-sm text-red-400/70 mb-8 p-3 bg-red-500/10 rounded-lg">
+              {project.error}
+            </p>
+          )}
+          
+          <div className="flex gap-4 justify-center">
+            <Link href="/dashboard">
+              <Button variant="outline" className="border-white/10 hover:bg-white/10">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
+            <Link href="/app">
+              <Button className="bg-purple-600 hover:bg-purple-500">
+                Réessayer
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // Legacy projects without status are treated as completed
+  // Only show loading UI for projects explicitly set to pending/generating
+  const isProjectReady = !project.status || project.status === "completed";
+  
+  if (!isProjectReady) {
+    // This case is already handled above (pending/generating/error)
+    // but kept as safeguard
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
       </div>
     );
   }
@@ -368,11 +479,23 @@ export default function ProjectDetailsPage() {
                   {project.products.map((product: any, i: number) => (
                     <a 
                       key={i}
-                      href={`https://www.amazon.fr/s?k=${encodeURIComponent(product.searchTerm)}`}
+                      href={product.productUrl || `https://www.google.com/search?q=${encodeURIComponent(product.searchTerm)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="group flex flex-col gap-4 rounded-2xl border border-white/5 bg-white/5 p-5 transition-all duration-300 hover:border-purple-500/30 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/5"
                     >
+                      {/* Product Image */}
+                      {product.imageUrl && (
+                        <div className="relative h-32 w-full overflow-hidden rounded-xl bg-black/40">
+                          <img 
+                            src={product.imageUrl} 
+                            alt={product.name}
+                            className="h-full w-full object-cover"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        </div>
+                      )}
+                      
                       <div className="flex items-start justify-between">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-black/40 text-2xl border border-white/5">
                           {product.category === "Sofa" ? "🛋️" : 
@@ -385,7 +508,7 @@ export default function ProjectDetailsPage() {
                       </div>
                       
                       <div className="flex-1">
-                        <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
+                        <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2">
                           {product.name}
                         </h4>
                         <p className="mt-2 text-sm text-gray-400 line-clamp-2 leading-relaxed">
@@ -395,9 +518,9 @@ export default function ProjectDetailsPage() {
                       
                       <div className="mt-auto pt-4 border-t border-white/5">
                         <div className="flex items-center justify-between text-xs font-medium">
-                          <span className="text-gray-500">Disponible sur Amazon</span>
+                          <span className="text-gray-500">{product.productUrl ? "Lien direct" : "Rechercher"}</span>
                           <span className="flex items-center gap-1 text-purple-400 group-hover:translate-x-1 transition-transform">
-                            Voir l'offre <ArrowRight className="h-3 w-3" />
+                            Acheter <ArrowRight className="h-3 w-3" />
                           </span>
                         </div>
                       </div>
