@@ -1,50 +1,48 @@
-"use client";
+"use client"
 
-import { motion } from "framer-motion";
-import { Upload, Wand2, ShoppingBag } from "lucide-react";
+import { motion } from "framer-motion"
+import { Upload, Wand2, ShoppingBag } from "lucide-react"
 
 const steps = [
   {
     icon: Upload,
     step: "01",
     title: "Uploadez votre photo",
-    description: "Prenez une photo de votre pièce actuelle. Notre IA l'analyse en quelques secondes.",
+    description: "Prenez une photo de votre pièce actuelle. Notre IA l'analyse instantanément.",
   },
   {
     icon: Wand2,
     step: "02",
     title: "Choisissez votre style",
-    description: "Sélectionnez parmi 15+ styles de design. L'IA génère votre nouvelle pièce.",
+    description: "Sélectionnez parmi 20+ styles de design. L'IA génère votre nouvelle pièce.",
   },
   {
     icon: ShoppingBag,
     step: "03",
     title: "Achetez les produits",
-    description: "Recevez une shopping list avec liens directs vers les vrais produits.",
+    description: "Recevez une liste d'achats avec liens directs vers les vrais produits.",
   },
-];
+]
 
 export function HowItWorks() {
   return (
-    <section className="bg-black py-32 text-white">
-      <div className="container mx-auto px-4">
+    <section className="relative py-32 px-4 overflow-hidden">
+      <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-fuchsia-600/10 blur-[120px]" />
+
+      <div className="container relative z-10 mx-auto">
         <div className="mb-20 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <span className="text-sm font-medium text-purple-400 uppercase tracking-wider">Simple & Rapide</span>
-            <h2 className="font-outfit text-4xl font-medium md:text-5xl mt-4">
-              Comment ça marche ?
-            </h2>
-            <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <span className="inline-block text-sm font-bold text-purple-400 uppercase tracking-wider mb-4 px-4 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
+              Simple & Rapide
+            </span>
+            <h2 className="font-sans text-5xl font-bold text-white md:text-6xl mt-6">Comment ça marche ?</h2>
+            <p className="mt-6 text-xl text-gray-400 max-w-2xl mx-auto">
               Transformez votre intérieur en 3 étapes simples
             </p>
           </motion.div>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3 max-w-6xl mx-auto">
           {steps.map((item, index) => (
             <motion.div
               key={index}
@@ -54,22 +52,20 @@ export function HowItWorks() {
               viewport={{ once: true }}
               className="relative group"
             >
-              {/* Connector Line */}
               {index < steps.length - 1 && (
-                <div className="hidden md:block absolute top-16 left-[60%] w-[80%] h-[2px] bg-gradient-to-r from-purple-500/50 to-transparent" />
+                <div className="hidden md:block absolute top-20 left-[60%] w-[80%] h-[2px] bg-gradient-to-r from-purple-500/50 via-fuchsia-500/30 to-transparent" />
               )}
-              
-              <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-8 transition-all duration-500 hover:border-purple-500/30 hover:shadow-[0_0_40px_-10px_rgba(168,85,247,0.2)]">
-                {/* Step Number */}
-                <div className="absolute top-6 right-6 text-6xl font-outfit font-bold text-white/5 group-hover:text-purple-500/10 transition-colors">
+
+              <div className="relative overflow-hidden rounded-3xl border border-purple-500/20 bg-gradient-to-b from-purple-950/30 to-transparent p-8 transition-all duration-500 hover:border-purple-500/40 hover:shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] hover:-translate-y-1">
+                <div className="absolute top-6 right-6 text-7xl font-sans font-black text-purple-500/5 group-hover:text-purple-500/10 transition-colors">
                   {item.step}
                 </div>
-                
-                <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 shadow-lg shadow-purple-500/25 group-hover:scale-110 transition-transform duration-300">
+
+                <div className="mb-6 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-600 shadow-lg shadow-purple-500/30 group-hover:scale-110 group-hover:shadow-purple-500/50 transition-all duration-300">
                   <item.icon className="h-8 w-8 text-white" />
                 </div>
-                
-                <h3 className="mb-3 text-xl font-bold text-white">{item.title}</h3>
+
+                <h3 className="mb-4 text-2xl font-bold text-white">{item.title}</h3>
                 <p className="text-gray-400 leading-relaxed">{item.description}</p>
               </div>
             </motion.div>
@@ -77,5 +73,5 @@ export function HowItWorks() {
         </div>
       </div>
     </section>
-  );
+  )
 }

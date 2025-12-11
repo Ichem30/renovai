@@ -4,154 +4,38 @@ import { GoogleGenAI } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 /**
- * SYSTEM PROMPT BUILDER
- * Creates a highly detailed prompt that ensures:
- * - Strict preservation of room structure and proportions
- * - Photorealistic quality
- * - Consistent perspective and lighting
+ * Build optimized prompt for room transformation
+ * Concise but effective for preserving structure
  */
-function buildMasterPrompt(roomType: string, style: string, userPrompt: string, hasReferenceImage: boolean): string {
+function buildPrompt(roomType: string, style: string, userPrompt: string, hasImage: boolean): string {
   
-  if (!hasReferenceImage) {
-    // Generation from scratch (no reference image)
-    return `Create a stunning photorealistic interior design visualization.
-
-SCENE DESCRIPTION:
-- Room type: ${roomType}
-- Design style: ${style}
-- User vision: ${userPrompt}
-
-RENDERING SPECIFICATIONS:
-- Photorealistic quality, indistinguishable from professional photography
-- Shot with a professional wide-angle lens (24mm equivalent)
-- Natural daylight flooding through windows
-- Subtle ambient shadows for depth
-- 8K resolution quality
-- Color grading: warm and inviting tones
-
-COMPOSITION:
-- Eye-level perspective at approximately 1.5m height
-- Balanced composition following rule of thirds
-- Clear focal point showcasing the main design elements
-- Depth of field: sharp foreground, slightly soft background
-
-OUTPUT: A single stunning interior design photograph that would be featured in Architectural Digest or Elle Décoration.`;
+  if (!hasImage) {
+    return `Create photorealistic ${roomType} interior, ${style} style. ${userPrompt}. 
+Professional interior photography, 8K quality, natural lighting, Architectural Digest quality.`;
   }
 
-  // Transformation of existing room (with reference image)
-  return `You are an elite interior design AI specializing in photorealistic room transformations.
+  // Concise but effective prompt for transformations
+  return `TASK: Transform this ${roomType} into ${style} design.
 
-═══════════════════════════════════════════════════════════════
-                    MISSION BRIEFING
-═══════════════════════════════════════════════════════════════
+USER VISION: ${userPrompt}
 
-Transform the provided ${roomType} photograph into a ${style} design while maintaining ABSOLUTE STRUCTURAL FIDELITY.
+STRICT RULES - NEVER BREAK:
+• KEEP exact room dimensions, walls, ceiling, floor positions
+• KEEP same camera angle and perspective  
+• KEEP all windows and doors in exact same positions
+• KEEP original lighting direction
 
-USER'S DESIGN VISION:
-"${userPrompt}"
+YOU CAN CHANGE:
+• Wall colors and textures
+• Floor materials
+• All furniture (replace/restyle)
+• Decor, plants, textiles
+• Light fixtures (same positions)
 
-═══════════════════════════════════════════════════════════════
-                    IMMUTABLE CONSTRAINTS
-═══════════════════════════════════════════════════════════════
+STYLE: Apply authentic ${style} design
+QUALITY: Photorealistic, 8K, professional interior photography
 
-These rules are ABSOLUTE and must NEVER be violated:
-
-📐 GEOMETRIC PRESERVATION (CRITICAL):
-   • Maintain EXACT room dimensions and proportions
-   • Preserve ALL wall positions, angles, and intersections
-   • Keep ceiling height precisely as shown
-   • Floor area must remain identical
-   • Room corners and edges stay in exact positions
-
-📷 PERSPECTIVE LOCK:
-   • Camera position is FIXED - do not move or rotate
-   • Focal length remains unchanged
-   • Vanishing points stay in identical positions
-   • Lens distortion pattern must match original
-   • Eye level remains constant
-
-🏗️ ARCHITECTURAL INTEGRITY:
-   • Windows: Keep exact count, size, shape, and position
-   • Doors: Preserve location, size, and swing direction
-   • Built-in elements: Maintain all fixed architectural features
-   • Ceiling details: Preserve beams, moldings, skylights
-   • Structural columns or supports: Keep exactly as is
-
-💡 LIGHTING COHERENCE:
-   • Natural light sources stay in original positions
-   • Light direction and angle must match the original
-   • Shadow casting must be physically accurate
-   • Time of day feeling should be preserved
-   • No magical light sources appearing from nowhere
-
-═══════════════════════════════════════════════════════════════
-                    TRANSFORMATION SCOPE
-═══════════════════════════════════════════════════════════════
-
-You ARE permitted to redesign:
-
-🎨 SURFACES & FINISHES:
-   • Wall colors, textures, wallpapers, or paint finishes
-   • Floor materials (hardwood, tile, carpet, concrete, etc.)
-   • Ceiling color and texture (within existing structure)
-   • Trim and molding colors
-
-🪑 FURNITURE & LAYOUT:
-   • Replace, add, or remove furniture pieces
-   • Reposition furniture within the floor space
-   • Upgrade furniture style to match ${style} aesthetic
-   • Scale furniture appropriately to room dimensions
-
-🖼️ DÉCOR & STYLING:
-   • Artwork, mirrors, and wall decorations
-   • Plants, vases, and decorative objects
-   • Textiles: rugs, curtains, cushions, throws
-   • Books, candles, and styling accessories
-
-💡 LIGHTING FIXTURES:
-   • Replace existing fixtures with new designs
-   • Add table lamps, floor lamps, or pendant lights
-   • Maintain logical light source positions
-
-═══════════════════════════════════════════════════════════════
-                    STYLE SPECIFICATIONS: ${style.toUpperCase()}
-═══════════════════════════════════════════════════════════════
-
-Apply the ${style} design philosophy authentically:
-• Use characteristic materials and textures of ${style}
-• Apply the color palette typical of ${style} interiors
-• Select furniture silhouettes that define ${style}
-• Include signature decorative elements of ${style}
-• Create the atmosphere and mood associated with ${style}
-
-═══════════════════════════════════════════════════════════════
-                    QUALITY STANDARDS
-═══════════════════════════════════════════════════════════════
-
-PHOTOREALISM REQUIREMENTS:
-• Quality level: Professional architectural photography
-• Resolution feeling: 8K equivalent detail
-• Texture rendering: Visible fabric weaves, wood grain, stone pores
-• Material accuracy: Realistic reflections, refractions, subsurface scattering
-• Edge quality: Clean, natural transitions without artifacts
-
-COMPOSITION EXCELLENCE:
-• Maintain the original photo's compositional strength
-• Ensure visual balance with new design elements
-• Create clear depth layers (foreground, midground, background)
-• Guide the eye through the space naturally
-
-═══════════════════════════════════════════════════════════════
-                    FINAL OUTPUT
-═══════════════════════════════════════════════════════════════
-
-Generate ONE photorealistic image that:
-✓ Preserves the exact room structure from the input
-✓ Transforms the ${roomType} with authentic ${style} design
-✓ Looks indistinguishable from a professional interior photograph
-✓ Would be publishable in Architectural Digest
-
-BEGIN TRANSFORMATION.`;
+Generate the transformed room.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -169,20 +53,28 @@ export async function POST(req: NextRequest) {
     const style = analysis?.style || "modern";
     const userPrompt = enhancedPrompt || prompt;
     
-    // Build the master prompt
-    const masterPrompt = buildMasterPrompt(roomType, style, userPrompt, !!image);
+    // Build the prompt
+    const masterPrompt = buildPrompt(roomType, style, userPrompt, !!image);
+    console.log("Step 2: Prompt built, length:", masterPrompt.length);
 
-    // Build contents array - TEXT FIRST, then images
+    // Build contents array
     const contents: any[] = [{ text: masterPrompt }];
 
     // Add original room image if provided
     if (image) {
       try {
-        const imageResp = await fetch(image);
+        console.log("Fetching original image...");
+        const imageResp = await fetch(image, {
+          signal: AbortSignal.timeout(30000) // 30s timeout
+        });
         if (imageResp.ok) {
           const arrayBuffer = await imageResp.arrayBuffer();
           const base64Image = Buffer.from(arrayBuffer).toString("base64");
           const mimeType = imageResp.headers.get("content-type") || "image/jpeg";
+          
+          // Check image size
+          const imageSizeKB = Math.round(arrayBuffer.byteLength / 1024);
+          console.log(`Original image: ${imageSizeKB}KB, type: ${mimeType}`);
 
           contents.push({
             inlineData: {
@@ -190,31 +82,29 @@ export async function POST(req: NextRequest) {
               data: base64Image,
             },
           });
+        } else {
+          console.error("Failed to fetch original image:", imageResp.status);
         }
       } catch (e) {
         console.error("Failed to fetch original image:", e);
+        return NextResponse.json({ error: "Failed to load original image" }, { status: 400 });
       }
     }
 
-    // Add product reference images (limit to 3 for better focus)
+    // Add product reference images (max 5)
     if (productImages && Array.isArray(productImages)) {
-      const limitedImages = productImages.slice(0, 3);
-      console.log(`Generator received ${productImages.length} product images, using ${limitedImages.length}.`);
+      const limitedImages = productImages.slice(0, 5);
+      console.log(`Adding ${limitedImages.length} product reference images...`);
       
       for (const imgUrl of limitedImages) {
         if (!imgUrl) continue;
         try {
-          console.log(`Fetching product image: ${imgUrl}`);
           const imgResp = await fetch(imgUrl, {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
+            headers: { "User-Agent": "Mozilla/5.0" },
+            signal: AbortSignal.timeout(10000) // 10s timeout per image
           });
           
-          if (!imgResp.ok) {
-            console.error(`Failed to fetch product image ${imgUrl}: ${imgResp.status}`);
-            continue;
-          }
+          if (!imgResp.ok) continue;
           
           const arrayBuffer = await imgResp.arrayBuffer();
           const base64Image = Buffer.from(arrayBuffer).toString("base64");
@@ -226,32 +116,45 @@ export async function POST(req: NextRequest) {
               data: base64Image,
             },
           });
-          console.log(`Successfully added product image: ${imgUrl}`);
         } catch (e) {
-          console.error("Failed to fetch product image:", imgUrl, e);
+          console.warn("Skipped product image:", imgUrl);
         }
       }
     }
 
-    console.log(`Step 2: Sending ${contents.length} content parts to Gemini...`);
-    console.log(`Step 3: Calling gemini-3-pro-image-preview...`);
-    
+    console.log(`Step 3: Calling Gemini with ${contents.length} parts...`);
     const startTime = Date.now();
 
-    // Call Gemini 3 Pro Image Preview with correct format
+    // Call Gemini 3 Pro Image (DO NOT CHANGE THIS MODEL)
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-image-preview",
       contents: contents,
       config: {
         responseModalities: ["TEXT", "IMAGE"],
-        imageConfig: {
-          aspectRatio: "16:9",
-          imageSize: "2K",
-        },
       },
     });
     
-    console.log(`Step 4: Gemini responded in ${Date.now() - startTime}ms`);
+    const duration = Math.round((Date.now() - startTime) / 1000);
+    console.log(`Step 4: Gemini responded in ${duration}s`);
+
+    // Debug: Log full response structure
+    console.log("Response structure:", JSON.stringify({
+      hasCandidates: !!response.candidates,
+      candidateCount: response.candidates?.length || 0,
+      firstCandidateFinishReason: response.candidates?.[0]?.finishReason,
+      partCount: response.candidates?.[0]?.content?.parts?.length || 0,
+      partTypes: response.candidates?.[0]?.content?.parts?.map((p: any) => 
+        p.text ? 'text' : p.inlineData ? 'image' : 'unknown'
+      )
+    }, null, 2));
+
+    // Check for safety blocks
+    if (response.candidates?.[0]?.finishReason === 'SAFETY') {
+      console.error("Generation blocked by safety filter");
+      return NextResponse.json({ 
+        error: "La génération a été bloquée par le filtre de sécurité. Essayez avec une description différente.", 
+      }, { status: 400 });
+    }
 
     // Extract generated image
     let generatedImageBase64 = null;
@@ -260,22 +163,37 @@ export async function POST(req: NextRequest) {
       for (const part of response.candidates[0].content.parts) {
         if ((part as any).inlineData) {
           generatedImageBase64 = (part as any).inlineData.data;
+          console.log("Step 5: Image extracted successfully");
           break;
         }
       }
     }
 
     if (!generatedImageBase64) {
-      // Try to get text response for debugging
       const textPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text);
-      console.error("No image generated. Response:", textPart?.text || "No text either");
-      return NextResponse.json({ error: "Failed to generate image" }, { status: 500 });
+      const finishReason = response.candidates?.[0]?.finishReason;
+      console.error("No image generated. Finish reason:", finishReason, "Text:", textPart?.text?.substring(0, 300) || "None");
+      
+      // Return more helpful error
+      return NextResponse.json({ 
+        error: "Échec de génération. Le modèle n'a pas retourné d'image.", 
+        details: textPart?.text || `Finish reason: ${finishReason || 'unknown'}`
+      }, { status: 500 });
     }
 
     return NextResponse.json({ imageBase64: generatedImageBase64 });
 
-  } catch (error) {
-    console.error("Image Generation Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Image Generation Error:", error.message || error);
+    
+    // More specific error messages
+    if (error.message?.includes("timeout") || error.message?.includes("ETIMEDOUT")) {
+      return NextResponse.json({ error: "Request timed out. Please try again." }, { status: 504 });
+    }
+    if (error.message?.includes("fetch failed")) {
+      return NextResponse.json({ error: "Network error. Check your connection." }, { status: 503 });
+    }
+    
+    return NextResponse.json({ error: "Generation failed. Please try again." }, { status: 500 });
   }
 }

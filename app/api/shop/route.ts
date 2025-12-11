@@ -210,7 +210,21 @@ export async function POST(req: NextRequest) {
       budgetContext = "Select premium, high-quality items. Budget is flexible.";
     }
 
-    // Step 1: Generate product categories/types with Gemini
+    // Room-specific priority categories (most important items first)
+    const ROOM_PRIORITIES: Record<string, string[]> = {
+      bedroom: ["lit", "table de chevet", "commode", "lampe de chevet", "tapis"],
+      living_room: ["canapé", "table basse", "luminaire", "tapis", "fauteuil"],
+      kitchen: ["tabouret de bar", "suspension", "rangement", "accessoires cuisine", "plantes"],
+      bathroom: ["miroir", "rangement", "luminaire", "accessoires bain", "panier"],
+      office: ["bureau", "chaise de bureau", "lampe de bureau", "rangement", "décoration"],
+      dining_room: ["table à manger", "chaises", "suspension", "buffet", "vaisselle déco"],
+      terrace: ["salon de jardin", "parasol", "luminaire extérieur", "plantes", "tapis extérieur"],
+      garden: ["mobilier jardin", "luminaire extérieur", "pot de fleurs", "fontaine", "décoration"],
+    };
+
+    const priorities = ROOM_PRIORITIES[roomType] || ROOM_PRIORITIES.living_room;
+    const priorityList = priorities.slice(0, 5).join(", ");
+
     let prompt = "";
 
     if (furnitureList && furnitureList.length > 0) {
@@ -225,28 +239,26 @@ export async function POST(req: NextRequest) {
         1. "category": The type of item
         2. "searchTerm": A precise French search query to find this product on e-commerce sites (include brand name if relevant)
         3. "visual_description": Detailed visual description for AI image generation
+        4. "priority": A number 1-5 (1 = most important for the room)
         
         Return a JSON array of objects.
       `;
     } else {
-      let categoryFocus = "furniture, lighting, and decor";
-      if (roomType === "kitchen") categoryFocus = "bar stools, pendant lighting, kitchen accessories, and decor";
-      if (roomType === "bedroom") categoryFocus = "bed frame, nightstands, bedroom lighting, and textiles";
-      if (roomType === "bathroom") categoryFocus = "bathroom accessories, mirrors, lighting, and storage";
-      if (roomType === "office") categoryFocus = "desk, ergonomic chair, desk lamp, and organization";
-
       prompt = `
-        You are an expert interior designer. Suggest 6 specific products for a "${style}" style "${roomType}".
+        You are an expert interior designer. Suggest exactly 5 products for a "${style}" style "${roomType}".
         
-        Focus on: ${categoryFocus}.
+        IMPORTANT: Focus on these priority items (most important first):
+        ${priorityList}
+        
         ${budgetContext}
         
         For EACH item, provide:
-        1. "category": The type of item (e.g., "Sofa", "Lamp", "Rug")
-        2. "searchTerm": A precise French search query with brand name (e.g., "fauteuil velours vert La Redoute", "lampadaire design Maisons du Monde")
+        1. "category": The type of item (e.g., "Canapé", "Lampe", "Tapis")
+        2. "searchTerm": A precise French search query with brand name (e.g., "canapé velours vert La Redoute", "lampadaire design Maisons du Monde")
         3. "visual_description": Detailed visual description for AI image generation
+        4. "priority": A number 1-5 (1 = most important)
         
-        Return a JSON array of objects.
+        Return a JSON array of 5 objects, ordered by priority (1 first).
       `;
     }
 
@@ -334,16 +346,23 @@ export async function POST(req: NextRequest) {
       })
     );
 
-    const enrichedCount = products.filter((p: any) => p.productUrl).length;
-    const verifiedCount = products.filter((p: any) => p.verified).length;
-    const withPriceCount = products.filter((p: any) => p.price).length;
+    // Filter: Only keep products WITH images (most important requirement)
+    const productsWithImages = products.filter((p: any) => p.imageUrl !== null);
     
-    console.log(`📊 Results: ${enrichedCount}/${products.length} with links, ${verifiedCount} verified, ${withPriceCount} with prices`);
+    // Sort by priority (1 = most important)
+    productsWithImages.sort((a: any, b: any) => (a.priority || 5) - (b.priority || 5));
+    
+    const enrichedCount = productsWithImages.filter((p: any) => p.productUrl).length;
+    const verifiedCount = productsWithImages.filter((p: any) => p.verified).length;
+    const withPriceCount = productsWithImages.filter((p: any) => p.price).length;
+    
+    console.log(`📊 Results: ${productsWithImages.length}/${products.length} with images, ${verifiedCount} verified, ${withPriceCount} with prices`);
 
     return NextResponse.json({ 
-      products,
+      products: productsWithImages, // Only return products WITH images
       stats: {
-        total: products.length,
+        total: productsWithImages.length,
+        searched: products.length,
         withLinks: enrichedCount,
         verified: verifiedCount,
         withPrices: withPriceCount

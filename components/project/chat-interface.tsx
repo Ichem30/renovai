@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Sparkles, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Send, Sparkles, Loader2, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Message {
@@ -77,7 +77,6 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
     setLoading(true);
 
     try {
-      // Call API
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +98,6 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
 
       setMessages((prev) => [...prev, aiMsg]);
 
-      // Check if image generation was triggered
       if (data.action === "generate_image" && onGenerateImage) {
         onGenerateImage(data.imagePrompt);
       }
@@ -113,75 +111,82 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
 
   const handleThemeClick = (themePrompt: string) => {
     setInput(`Applique un ${themePrompt}`);
-    // Optional: auto-send
   };
 
   return (
-    <div className="flex h-full flex-col bg-gray-900/50 backdrop-blur-sm">
-      {/* Header with Shopping Toggle */}
-      <div className="border-b border-white/10 p-4">
-        <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-2 font-semibold text-white">
-            <Sparkles className="h-4 w-4 text-purple-400" />
-            Assistant Déco
+    <div className="flex h-full flex-col bg-gradient-to-br from-gray-950 via-purple-950/20 to-gray-950">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-white/5 backdrop-blur-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="flex items-center gap-2.5 text-base font-semibold">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-lg shadow-purple-500/30">
+              <Sparkles className="h-3.5 w-3.5 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-purple-200 via-fuchsia-200 to-pink-200 bg-clip-text text-transparent">
+              Assistant Déco
+            </span>
           </h3>
-          
-          {/* Shopping Search Toggle */}
-          <button 
-            onClick={() => setIncludeShoppingSearch(!includeShoppingSearch)}
-            className={cn(
-              "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
-              includeShoppingSearch 
-                ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
-                : "bg-white/5 text-gray-400 border border-white/10"
-            )}
-          >
-            <span className="text-sm">🛍️</span>
-            Recherche produits
-            <span className={cn(
-              "h-2 w-2 rounded-full transition-colors",
-              includeShoppingSearch ? "bg-green-400" : "bg-gray-500"
-            )} />
-          </button>
         </div>
+        
+        {/* Shopping Toggle */}
+        <button 
+          onClick={() => setIncludeShoppingSearch(!includeShoppingSearch)}
+          className={cn(
+            "w-full flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-300",
+            includeShoppingSearch 
+              ? "bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 text-purple-200 border border-purple-400/40" 
+              : "bg-white/5 text-gray-400 border border-white/10"
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-3.5 w-3.5" />
+            <span>Recherche produits</span>
+          </div>
+          <span className={cn(
+            "h-2 w-2 rounded-full transition-all duration-300",
+            includeShoppingSearch ? "bg-green-400 animate-pulse" : "bg-gray-600"
+          )} />
+        </button>
+
         {includeShoppingSearch && (
-          <p className="mt-2 text-[10px] text-gray-500">
+          <p className="mt-2 text-[10px] text-purple-300/60">
             Les suggestions de meubles incluront des liens d&apos;achat
           </p>
         )}
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={cn(
-              "flex w-max max-w-[85%] flex-col gap-2 rounded-2xl px-4 py-3 text-sm",
+              "flex w-max max-w-[90%] flex-col gap-2 rounded-xl px-4 py-2.5 text-xs leading-relaxed shadow-lg backdrop-blur-sm transition-all duration-300",
               msg.role === "user"
-                ? "ml-auto bg-purple-600 text-white"
-                : "bg-white/10 text-gray-200"
+                ? "ml-auto bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white border border-purple-400/30"
+                : "bg-white/10 text-gray-100 border border-white/10"
             )}
           >
             {msg.content}
           </div>
         ))}
         {loading && (
-          <div className="flex w-max max-w-[85%] items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-sm text-gray-400">
+          <div className="flex w-max items-center gap-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 px-4 py-2.5 text-xs text-purple-300">
             <Loader2 className="h-3 w-3 animate-spin" />
-            RenovAI réfléchit...
+            <span>RenovAI réfléchit...</span>
           </div>
         )}
       </div>
 
-      {/* Quick Actions (Themes) */}
-      <div className="border-t border-white/10 p-2">
-        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+      {/* Theme Buttons */}
+      <div className="border-t border-white/10 bg-white/5 p-3">
+        <div className="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
           {THEMES.map((theme) => (
             <button
               key={theme.id}
               onClick={() => handleThemeClick(theme.prompt)}
-              className="whitespace-nowrap rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-gray-300 hover:bg-white/10 hover:text-white transition-colors"
+              className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-medium text-gray-300 backdrop-blur-sm transition-all duration-300 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-fuchsia-500/20 hover:text-purple-200 hover:border-purple-400/40 text-left truncate"
+              title={theme.label}
             >
               {theme.label}
             </button>
@@ -190,23 +195,23 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
       </div>
 
       {/* Input */}
-      <div className="border-t border-white/10 p-4">
-        <div className="relative flex items-center gap-2">
+      <div className="border-t border-white/10 bg-white/5 backdrop-blur-xl p-4">
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Décrivez vos envies..."
-            className="flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-white/20 bg-black/30 backdrop-blur-sm px-3 py-2.5 text-xs text-white placeholder-gray-400 transition-all duration-300 focus:border-purple-400/60 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
           />
           <Button 
             size="icon" 
             onClick={handleSend}
             disabled={loading || !input.trim()}
-            className="h-11 w-11 rounded-xl bg-purple-600 hover:bg-purple-700"
+            className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 disabled:opacity-50 shadow-lg shadow-purple-500/30 transition-all duration-300"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>

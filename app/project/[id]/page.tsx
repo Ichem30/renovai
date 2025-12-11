@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Download, Share2, Loader2, Maximize2, ShoppingBag, X, Sparkles, Wand2, Check } from "lucide-react";
 import Link from "next/link";
 import { ChatInterface } from "@/components/project/chat-interface";
+import { ImageGallery } from "@/components/chat/image-gallery";
 import { v4 as uuidv4 } from "uuid";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -295,144 +296,76 @@ export default function ProjectDetailsPage() {
 
   const currentAfterImage = activeImage || project.generations?.[project.generations.length - 1]?.imageUrl || project.originalImageUrl;
 
+  const galleryImages = project ? [
+    { id: "original", label: "Original", url: project.originalImageUrl },
+    ...(project.generations || []).map((gen, idx) => ({
+      id: gen.id,
+      label: `Version ${idx + 1}`,
+      url: gen.imageUrl
+    }))
+  ] : [];
+
   return (
-    <div className="flex h-screen flex-col bg-black text-white overflow-hidden selection:bg-purple-500/30">
-      
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel - Image Visualization */}
-        <div className="relative flex flex-1 flex-col bg-black/50 overflow-y-auto">
-          {/* Glass Toolbar */}
-          <div className="sticky top-4 z-20 mx-auto w-[95%] max-w-[1600px] rounded-full border border-white/10 bg-black/60 px-6 py-3 backdrop-blur-xl shadow-2xl flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link 
-                href="/dashboard"
-                className="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
-              >
+    <div className="h-screen bg-black overflow-hidden flex flex-col">
+      {/* Header */}
+      <header className="border-b border-white/10 bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="sm" className="gap-2 text-gray-400 hover:text-white">
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Retour</span>
-              </Link>
-              <div className="h-4 w-[1px] bg-white/10" />
-              <h1 className="text-sm font-medium text-white flex items-center gap-2">
-                <span className="font-outfit font-bold">{project.name || project.analysis?.roomType || "Projet"}</span>
-                {analyzing && (
-                  <span className="flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300 animate-pulse">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Analyse IA...
-                  </span>
-                )}
-              </h1>
-            </div>
-            <div className="flex gap-2">
-              {project.products && project.products.length > 0 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex items-center gap-2 rounded-full bg-purple-500/10 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20 border border-purple-500/20"
-                  onClick={() => setShowShoppingList(true)}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  <span className="hidden sm:inline">Shopping List</span>
-                </Button>
+                Retour
+              </Button>
+            </Link>
+            <div className="h-6 w-px bg-white/10" />
+            <h1 className="text-lg font-semibold text-white flex items-center gap-2">
+              <span className="font-outfit font-bold">{project.name || project.analysis?.roomType || "Projet"}</span>
+              {analyzing && (
+                <span className="flex items-center gap-1 rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Analyse IA...
+                </span>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:bg-white/10 hover:text-white">
-                <Share2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-gray-400 hover:bg-white/10 hover:text-white">
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
+            </h1>
           </div>
 
-          {/* Canvas Area */}
-          <div className="flex-shrink-0 p-4 flex flex-col items-center justify-center gap-6 h-[calc(100vh-100px)]">
-            <div className="relative h-full w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 shadow-[0_0_50px_-10px_rgba(0,0,0,0.5)] bg-gray-900/50 group">
-              <AnimatePresence>
-                {generating && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md"
-                  >
-                    <div className="relative">
-                      <div className="absolute inset-0 animate-ping rounded-full bg-purple-500/20" />
-                      <div className="relative rounded-full bg-black p-4 border border-purple-500/30">
-                        <Wand2 className="h-8 w-8 animate-pulse text-purple-500" />
-                      </div>
-                    </div>
-                    <p className="mt-6 text-lg font-medium text-white font-outfit">Création de votre design...</p>
-                    <p className="text-sm text-gray-400">L'IA réinvente votre espace</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <div className="relative h-full w-full flex items-center justify-center p-4">
-                <img 
-                  src={currentAfterImage} 
-                  alt="Design actuel" 
-                  className="max-h-full max-w-full object-contain shadow-2xl rounded-lg"
-                />
-                
-                {/* Badge indicating version */}
-                <div className="absolute top-6 left-6 flex items-center gap-2 rounded-full bg-black/60 px-4 py-1.5 text-xs font-medium text-white backdrop-blur-xl border border-white/10 shadow-lg">
-                  <Sparkles className="h-3 w-3 text-purple-400" />
-                  {currentAfterImage === project.originalImageUrl ? "Photo Originale" : "Version Générée par IA"}
-                </div>
-              </div>
-            </div>
-
-            {/* Gallery / Carousel */}
-            {project.generations && project.generations.length > 0 && (
-              <div className="w-full max-w-[1600px] overflow-x-auto pb-4 scrollbar-hide">
-                <div className="flex gap-4 px-2 justify-center">
-                  {/* Original */}
-                  <button
-                    onClick={() => setActiveImage(project.originalImageUrl)}
-                    className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
-                      activeImage === project.originalImageUrl 
-                        ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
-                        : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
-                    }`}
-                  >
-                    <img src={project.originalImageUrl} alt="Original" className="h-full w-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                    <span className="absolute bottom-1 left-2 text-[10px] font-medium text-white">Original</span>
-                  </button>
-
-                  {/* Generations */}
-                  {project.generations.map((gen, idx) => (
-                    <div key={gen.id} className="relative group">
-                      <button
-                        onClick={() => setActiveImage(gen.imageUrl)}
-                        className={`relative h-20 w-32 flex-shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-300 ${
-                          activeImage === gen.imageUrl 
-                            ? "border-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.4)] scale-105" 
-                            : "border-white/10 opacity-60 hover:opacity-100 hover:scale-105"
-                        }`}
-                      >
-                        <img src={gen.imageUrl} alt={`Version ${idx + 1}`} className="h-full w-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                        <span className="absolute bottom-1 left-2 text-[10px] font-medium text-white">V{idx + 1}</span>
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteImage(e, gen.id)}
-                        className="absolute -top-2 -right-2 z-10 hidden h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 group-hover:flex"
-                        title="Supprimer"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            {project.products && project.products.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+                onClick={() => setShowShoppingList(true)}
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Shopping List
+              </Button>
             )}
+            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+              <Download className="h-4 w-4" />
+            </Button>
           </div>
         </div>
+      </header>
 
-        {/* Right Panel - AI Assistant */}
-        <div className="w-[380px] flex-shrink-0 bg-[#050505] border-l border-white/5 flex flex-col shadow-2xl z-30">
-          <ChatInterface 
-            projectId={project.id!} 
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Image Gallery */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <ImageGallery 
+            currentImage={currentAfterImage} 
+            images={galleryImages} 
+            onSelectImage={setActiveImage} 
+          />
+        </div>
+
+        {/* Right: Chat Sidebar */}
+        <div className="w-[420px] border-l border-white/10 flex-shrink-0 bg-[#050505] flex flex-col shadow-2xl z-30">
+          <ChatInterface
+            projectId={project.id!}
             initialAnalysis={project.analysis}
             onGenerateImage={handleGenerateImage}
           />
