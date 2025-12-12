@@ -26,10 +26,13 @@ export function ImageGallery({ currentImage, images, onSelectImage }: ImageGalle
       <div className="flex-1 flex items-center justify-center mb-6">
         <div className="relative w-full h-full max-w-5xl max-h-[calc(100vh-280px)] group">
           {/* Badge */}
-          <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-950/40 backdrop-blur-xl px-4 py-2 shadow-xl shadow-purple-500/20">
-            <Sparkles className="h-4 w-4 text-purple-400" />
-            <span className="text-sm font-medium text-purple-200">Version Générée par IA</span>
-          </div>
+          {/* Badge */}
+          {images.find(img => img.url === currentImage)?.id !== 'original' && (
+            <div className="absolute top-4 left-4 z-10 flex items-center gap-2 rounded-xl border border-purple-500/30 bg-purple-950/40 backdrop-blur-xl px-4 py-2 shadow-xl shadow-purple-500/20">
+              <Sparkles className="h-4 w-4 text-purple-400" />
+              <span className="text-sm font-medium text-purple-200">Version Générée par IA</span>
+            </div>
+          )}
 
           {/* Main Image */}
           <div className="relative w-full h-full rounded-2xl border border-white/10 bg-gray-900/50 backdrop-blur-sm overflow-hidden shadow-2xl shadow-black/50 transition-all duration-500 group-hover:border-purple-500/30 group-hover:shadow-purple-500/20">
