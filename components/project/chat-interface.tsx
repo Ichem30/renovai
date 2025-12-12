@@ -180,7 +180,7 @@ export function ChatInterface({ projectId, initialAnalysis, onGenerateImage }: C
 
       {/* Theme Buttons */}
       <div className="border-t border-white/10 bg-white/5 p-3">
-        <div className="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-500/30 scrollbar-track-white/5 hover:scrollbar-thumb-purple-500/50">
+        <div className="grid grid-cols-2 gap-2 max-h-[120px] overflow-y-auto pr-1 scrollbar-purple">
           {THEMES.map((theme) => (
             <button
               key={theme.id}

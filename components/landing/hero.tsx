@@ -64,8 +64,7 @@ export function Hero() {
               <Sparkles className="h-4 w-4 text-purple-400" />
               <span>2 projets gratuits</span>
             </div>
-            <div className="h-4 w-px bg-gray-700" />
-            <span>Sans carte bancaire</span>
+
             <div className="h-4 w-px bg-gray-700" />
             <span>Annulation en 1 clic</span>
           </div>

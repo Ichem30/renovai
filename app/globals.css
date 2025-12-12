@@ -128,4 +128,21 @@ html {
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
   }
+
+  /* Purple scrollbar for chat */
+  .scrollbar-purple::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-purple::-webkit-scrollbar-track {
+    background: rgba(168, 85, 247, 0.1);
+    border-radius: 10px;
+  }
+  .scrollbar-purple::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, rgba(168, 85, 247, 0.4), rgba(217, 70, 239, 0.4));
+    border-radius: 10px;
+  }
+  .scrollbar-purple::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, rgba(168, 85, 247, 0.6), rgba(217, 70, 239, 0.6));
+  }
 }
